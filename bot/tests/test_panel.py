@@ -284,6 +284,24 @@ class PanelTests(unittest.TestCase):
             self.assertIn(self.c.req("GET", f"/account/alfa/estensioni/{bad}")[0], (200, 404))
         self.assertIn(self.c.req("GET", "/account/alfa/estensioni/ricettario/modifica/ricette/abc")[0], (404,))
 
+    def test_pagina_esperti_accendi_e_spegni(self):
+        self.make_account()
+        self.assertEqual(self.c.login(), 303)
+        self.assertIn("Esperti", self.c.req("GET", "/account/alfa")[1])
+        st, body, _ = self.c.req("GET", "/account/alfa/esperti")
+        self.assertEqual(st, 200)
+        self.assertIn("Social Media Strategist", body)
+        self.assertIn("non può agire", body)
+        self.assertEqual(self.c.req("POST", "/account/alfa/esperti/grant_writer/spegni", {})[0], 403)  # senza CSRF
+        st, body, _ = self.c.post("/account/alfa/esperti/grant_writer/spegni", {})
+        self.assertIn("spento", body)
+        with open(os.path.join(self.acc, "alfa", "profile.json"), encoding="utf-8") as f:
+            d = json.load(f)
+        self.assertEqual(d["esperti_spenti"], ["grant_writer"])
+        self.assertEqual(d["kb"]["repo"], "git@x:y.git")  # il resto del profilo non si tocca
+        self.assertIn("acceso", self.c.post("/account/alfa/esperti/grant_writer/accendi", {})[1])
+        self.assertEqual(self.c.post("/account/alfa/esperti/non_esiste/spegni", {})[0], 404)
+
     # ---- accesso e difese ----
     def test_senza_login_non_si_vede_niente(self):
         st, body, r = self.c.req("GET", "/")

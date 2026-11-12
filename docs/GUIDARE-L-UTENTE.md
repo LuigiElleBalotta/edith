@@ -55,6 +55,9 @@ Pubblicare su Instagram, commentare, scrivere messaggi o candidature, comprare, 
 - Per provare senza rischi: dal pannello → account → *Catalogo* → «Timer di cottura» (non si collega a nessun sito).
 - Dettagli: [ESTENSIONI.md](ESTENSIONI.md).
 
+## Gli esperti
+Il manager può chiedere un secondo parere a consulenti (social, PR, bandi…). Spiega all'utente che sono **solo consigli**: non vedono il suo account, non possono agire, e il manager li confronta coi dati veri. Dal pannello → account → *Esperti* si spengono quelli che non servono. Dettagli: [ESPERTI.md](ESPERTI.md).
+
 ## Dopo il setup: aiutare a usarlo
 - Fagli provare: «chiedi al bot di fare il piano dei prossimi 7 giorni».
 - Mostra dove si cambiano personalità e regole: pannello → account → «Personalità» (vale subito).

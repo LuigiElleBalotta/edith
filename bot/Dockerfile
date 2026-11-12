@@ -10,6 +10,7 @@ RUN apt-get update \
 WORKDIR /srv
 COPY app ./app
 COPY catalogo ./catalogo
+COPY esperti ./esperti
 USER manager
 ENV EXTENSIONS_DIR=/extensions
 VOLUME ["/data", "/config/accounts", "/extensions"]

@@ -14,6 +14,7 @@ Ogni campo ha sotto una riga che spiega a cosa serve, con un esempio.
 
 - **Estensioni** (dentro ogni account): elenco, pagina di ciascuna con impostazioni e tabelle modificabili, «Da approvare» (le proposte del manager), spegni/accendi, versioni, «Esegui ora». Vedi [ESTENSIONI.md](ESTENSIONI.md).
 - **Cosa ha imparato**: le lezioni del manager e le sue proposte di regole; «Non riproporre più».
+- **Esperti**: accendi o spegni i consulenti che il manager può interpellare, per questo account. Vedi [ESPERTI.md](ESPERTI.md).
 - **Catalogo**: estensioni già pronte, da proporre a te stesso per l'approvazione.
 
 ## Accenderlo

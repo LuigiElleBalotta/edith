@@ -288,6 +288,39 @@ def catalog_page(panel, s, cfg, db, msg="", err=""):
     return page("Catalogo", corpo, s["csrf"])
 
 
+DIVISIONI = {"marketing": "Marketing e social", "design": "Design e immagine", "sales": "Vendite e contatti", "paid-media": "Pubblicità a pagamento",
+             "support": "Supporto e analisi", "product": "Prodotto e tendenze", "research": "Ricerca", "specialized": "Specialisti"}
+
+
+def experts_page(panel, s, cfg, db, msg="", err=""):
+    from . import esperti as esp
+    base = f"/account/{H(cfg.slug)}"
+    spenti = set(prof.load(db.profile_dir).get("esperti_spenti") or [])
+    gruppi = {}
+    for eid, m in sorted(esp.catalog().items()):
+        gruppi.setdefault(m["divisione"], []).append((eid, m))
+    corpo = (f'<a href="{base}" class="{BACK}">← Torna a {H(cfg.slug)}</a><h1 class="mt-2 text-2xl font-bold">Esperti</h1>'
+             '<p class="mt-2 text-slate-600 dark:text-slate-300">Sono consulenti che il manager può interpellare per un <b>parere</b> (strategia social, contenuti, PR, bandi…). '
+             'Un esperto <b>non vede il tuo account</b> (riceve solo ciò che il manager gli passa, senza chiavi), <b>non può agire</b> e il suo parere resta un\'ipotesi da verificare coi tuoi dati. '
+             'Qui scegli quali può usare per questo account.</p>' + flash(msg, err))
+    for div, voci in sorted(gruppi.items(), key=lambda kv: list(DIVISIONI).index(kv[0]) if kv[0] in DIVISIONI else 99):
+        righe = ""
+        for eid, m in voci:
+            on = eid not in spenti and m["verificato"]
+            stato = pill("attivo", "ok") if on else pill("spento" if m["verificato"] else "impronta non valida", "no" if not m["verificato"] else "mu")
+            azione = ""
+            if m["verificato"]:
+                azione = (f'<form method="post" action="{base}/esperti/{H(eid)}/{"spegni" if on else "accendi"}" class="inline">{_csrf(s)}'
+                          f'<button class="text-sm text-indigo-600 hover:underline dark:text-indigo-400">{"Spegni" if on else "Accendi"}</button></form>')
+            righe += (f'<li class="mt-3 border-t border-slate-200 pt-3 dark:border-slate-700"><div class="flex flex-wrap items-center justify-between gap-2">'
+                      f'<span class="font-medium">{H(m["nome"])}</span><span class="flex items-center gap-3">{stato}{azione}</span></div>'
+                      f'<p class="{HELP}">{H(m["descrizione"][:220])}</p></li>')
+        corpo += card(H(DIVISIONI.get(div, div)), "", f'<ul class="list-none">{righe}</ul>')
+    corpo += (f'<p class="{HELP} mt-6">I ruoli vengono dal progetto <a class="underline" href="https://github.com/msitarzewski/agency-agents">agency-agents</a> '
+              '(licenza MIT), importati senza modifiche da una versione fissa e ricontrollati a ogni uso.</p>')
+    return page("Esperti", corpo, s["csrf"])
+
+
 # ------------------------------------------------------------------ instradamento
 def _runtime(panel, cfg, db):
     ai = panel.ext_ask
@@ -313,6 +346,8 @@ def get(panel, s, cfg, parts, query):
                 return 200, lessons_page(panel, s, cfg, db)
             if parts == ["catalogo"]:
                 return 200, catalog_page(panel, s, cfg, db)
+            if parts == ["esperti"]:
+                return 200, experts_page(panel, s, cfg, db)
         except ext.ExtError as e:
             return 200, page("Errore", flash(err=str(e)), s["csrf"])
     return 404, page("Non trovato", "<h1>Pagina non trovata</h1>", s["csrf"])
@@ -335,6 +370,14 @@ def post(panel, s, cfg, parts, form):
                 db.lesson_set(int(parts[1]), "mai_piu" if parts[2] == "scarta" else "nuova")
                 db.audit("proprietario", "lezione_" + parts[2], f"#{parts[1]}")
                 return 200, lessons_page(panel, s, cfg, db, msg="Fatto.")
+            if len(parts) == 3 and parts[0] == "esperti" and parts[2] in ("accendi", "spegni"):
+                from . import esperti as esp
+                m = esp.catalog().get(parts[1])
+                if m is None or not m["verificato"]:
+                    return 404, page("Non trovato", "<h1>Esperto non trovato</h1>", s["csrf"])
+                prof.set_expert(db.profile_dir, parts[1], parts[2] == "accendi")
+                db.audit("proprietario", "esperto_" + parts[2], parts[1])
+                return 200, experts_page(panel, s, cfg, db, msg=f"«{m['nome']}»: {'acceso' if parts[2] == 'accendi' else 'spento'}.")
             if len(parts) == 3 and parts[0] == "catalogo" and parts[2] == "proponi":
                 ext.catalog_install(db, parts[1])
                 return 200, list_page(panel, s, cfg, db, msg="Proposta creata: leggila qui sotto e approvala se ti va bene.")

@@ -522,15 +522,31 @@ SPECS = [
         "name": "estensioni_elenco",
         "description": "Elenca le estensioni dell'account: attive, spente, in attesa di approvazione.",
         "parameters": {"type": "object", "properties": {}}}},
+    {"type": "function", "function": {
+        "name": "esperti_elenco",
+        "description": "Elenca gli ESPERTI che puoi interpellare per un parere (strategia social, contenuti, PR, candidature a bandi, vendite, traduzioni…). "
+                       "Leggi l'elenco prima di scegliere a chi chiedere. divisione facoltativa: marketing, design, sales, paid-media, support, product, research, specialized.",
+        "parameters": {"type": "object", "properties": {"divisione": {"type": "string"}}}}},
+    {"type": "function", "function": {
+        "name": "esperto_consulta",
+        "description": "Chiedi un PARERE a un esperto (usa l'id da esperti_elenco). È una consulenza: l'esperto non ha accesso all'account e non può agire, vede solo la richiesta e il contesto che gli passi. "
+                       "Passa solo i dati che servono (mai chiavi, token o dati personali di terzi). Il parere è un'IPOTESI: confrontalo con i dati reali dell'account, poi decidi tu cosa dire al proprietario "
+                       "(e ricorda che i benchmark dell'esperto non sono misure di questo account).",
+        "parameters": {"type": "object", "properties": {
+            "esperto": {"type": "string", "description": "id, es. social_media_strategist"},
+            "richiesta": {"type": "string", "description": "cosa vuoi sapere, con l'obiettivo"},
+            "contesto": {"type": "string", "description": "dati utili (brevi), senza segreti"}}, "required": ["esperto", "richiesta"]}}},
 ]
 
 
 class Tools:
     def __init__(self, db, ig=None, browser_url: str = "", browser_token: str = "",
-                 fetch=fetch_public, render=render_with_browser, search=None, to_png=svg_to_png, kb=None, disabled=(), ext=None):
+                 fetch=fetch_public, render=render_with_browser, search=None, to_png=svg_to_png, kb=None, disabled=(), ext=None,
+                 consult=None):
         self.db, self.ig, self.search = db, ig, search
         self.kb, self.disabled = kb, set(disabled or ())
         self.ext = ext  # esecutore delle estensioni approvate (None = funzione spenta)
+        self.consult = consult  # callable(id, richiesta, contesto) -> parere (None = esperti spenti)
         self._to_png = to_png
         self.images = []  # (png, didascalia): le consegna chi ha in mano Telegram
         self.proposals = []  # id di bozze in attesa: chi ha in mano Telegram manda i bottoni
@@ -555,6 +571,7 @@ class Tools:
         out = [s for s in out if self.ig or not s["function"]["name"].startswith("instagram_")]  # storico_account: sempre
         out = [s for s in out if self.kb or not s["function"]["name"].startswith("kb_")]
         out = [s for s in out if self.ext or not s["function"]["name"].startswith("estension")]
+        out = [s for s in out if self.consult or not s["function"]["name"].startswith("esper")]
         out += self.ext.specs() if self.ext else []  # strumenti delle estensioni approvate e attive
         return [s for s in out if s["function"]["name"] not in self.disabled]  # strumenti spenti dal profilo dell'account
 
@@ -841,6 +858,22 @@ class Tools:
         aid = ext_mod.propose(self.db, m, origine="proposta dal manager")  # ExtError -> messaggio chiaro
         self.proposals.append(aid)
         return f"Proposta #{aid} inviata al proprietario (Telegram e pannello). L'estensione NON è attiva finché non approva."
+
+    def t_esperti_elenco(self, divisione=""):
+        from . import esperti as esp, profile as prof
+        voci = esp.elenco(prof.load(self.db.profile_dir).get("esperti_spenti") or [], str(divisione or "").strip())
+        if not voci:
+            return "Nessun esperto disponibile."
+        return "\n".join(f"{i} ({d}) — {n}: {desc[:140]}" for i, n, desc, d in voci)
+
+    def t_esperto_consulta(self, esperto, richiesta, contesto=""):
+        from . import esperti as esp
+        try:
+            testo = self.consult(str(esperto).strip(), str(richiesta), str(contesto or ""))
+        except esp.EspertoError as e:
+            raise ToolError(str(e))
+        self.db.audit("manager", "esperto_consultato", str(esperto)[:40])  # solo chi, mai il contenuto
+        return testo
 
     def t_estensioni_elenco(self):
         store = ext_mod.store_for(self.db)

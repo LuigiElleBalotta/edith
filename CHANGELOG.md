@@ -1,5 +1,10 @@
 # Cronologia
 
+## 0.5 — Esperti
+- **Esperti**: 35 ruoli di consulenza (social, contenuti, PR, bandi, vendite, pubblicità, traduzioni…) dal progetto open source [agency-agents](https://github.com/msitarzewski/agency-agents) (MIT), importati senza modifiche da un commit fisso, con impronta ricontrollata a ogni uso. Il manager li interpella per un parere (`esperti_elenco`, `esperto_consulta`); sono **solo consulenza**: nessuno strumento, nessuna azione, nessun accesso all'account, regole di EDITH prima del testo del ruolo, token oscurati. Vedi [docs/ESPERTI.md](docs/ESPERTI.md).
+- Pannello: pagina **Esperti** per accenderli e spegnerli per account (`esperti_spenti` nel profilo).
+- Lo script `scripts/importa_esperti.py` riscarica l'elenco scelto (esclusi gli agenti che pubblicano da soli o fanno scraping).
+
 ## 0.4 — Estensioni e lezioni
 - **Estensioni**: il bot può proporre funzioni in più (dati propri con pagina modificabile, timer, lettura di API, programmi), descritte da un manifest e **sempre approvate** dal proprietario da Telegram o dal pannello. Vivono fuori dal contenitore (`./estensioni`). Vedi [docs/ESTENSIONI.md](docs/ESTENSIONI.md).
 - **Lezioni**: il bot annota cosa impara e propone regole per sé (con il prima e il dopo); cambiano solo `regole_extra` e solo dopo l'OK. Le rifiutate si riproporranno dopo qualche giorno; **«Non riproporre più»** le ferma per sempre.

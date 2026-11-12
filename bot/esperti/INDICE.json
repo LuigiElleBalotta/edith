@@ -1,0 +1,289 @@
+{
+  "_origine": {
+    "commit": "8ae6164602c95ca78828b148b9052460ee426885",
+    "licenza": "MIT",
+    "repository": "https://github.com/msitarzewski/agency-agents"
+  },
+  "esperti": {
+    "analytics_reporter": {
+      "descrizione": "Expert data analyst transforming raw data into actionable business insights. Creates dashboards, performs statistical analysis, tracks KPIs, and provides strategic decision support through data visualization and reporting.",
+      "divisione": "support",
+      "file": "analytics_reporter.md",
+      "nome": "Analytics Reporter",
+      "origine": "support/support-analytics-reporter.md",
+      "sha256": "eec3a4afdb04cc6617c452e3c67fbfc8eea070e96055b6a39dae62be5c07a452"
+    },
+    "brand_guardian": {
+      "descrizione": "Expert brand strategist and guardian specializing in brand identity development, consistency maintenance, and strategic brand positioning",
+      "divisione": "design",
+      "file": "brand_guardian.md",
+      "nome": "Brand Guardian",
+      "origine": "design/design-brand-guardian.md",
+      "sha256": "d1d5c78af85d4d35be94b93d5c011d17e3cf5dcb69b2037a3ebf3059803b893e"
+    },
+    "business_strategist": {
+      "descrizione": "Senior management consulting specialist for competitive analysis, market entry strategy, business model design, growth planning, organizational strategy, and strategic decision-making — translating complex market dynamics into clear, actionable strategies that create sustainable competitive advantage",
+      "divisione": "specialized",
+      "file": "business_strategist.md",
+      "nome": "Business Strategist",
+      "origine": "specialized/business-strategist.md",
+      "sha256": "9314906805d8dee81c3e2d10cb93513a391731d9fceb2e4c936257005a144b92"
+    },
+    "chief_of_staff": {
+      "descrizione": "Master coordinator for founders and executives — filters noise, owns processes, enforces consistency, routes decisions, and positions outputs for impact so the boss can think clearly.",
+      "divisione": "specialized",
+      "file": "chief_of_staff.md",
+      "nome": "Chief of Staff",
+      "origine": "specialized/specialized-chief-of-staff.md",
+      "sha256": "c0d053f19f32d369b6e9a4ded3a3b93efd792648b88b28f0ecd37a899b91b7b3"
+    },
+    "content_creator": {
+      "descrizione": "Expert content strategist and creator for multi-platform campaigns. Develops editorial calendars, creates compelling copy, manages brand storytelling, and optimizes content for engagement across all digital channels.",
+      "divisione": "marketing",
+      "file": "content_creator.md",
+      "nome": "Content Creator",
+      "origine": "marketing/marketing-content-creator.md",
+      "sha256": "26ddce44f057068a3935c13d53becd3c57385fb47fcdcfdd891b80269070b3d5"
+    },
+    "creative_strategist": {
+      "descrizione": "Paid media creative specialist focused on ad copywriting, RSA optimization, asset group design, and creative testing frameworks across Google, Meta, Microsoft, and programmatic platforms. Bridges the gap between performance data and persuasive messaging.",
+      "divisione": "paid-media",
+      "file": "creative_strategist.md",
+      "nome": "Ad Creative Strategist",
+      "origine": "paid-media/paid-media-creative-strategist.md",
+      "sha256": "a24a303228178eb23d514fee63831cf7e1a3d7e5276c54ce5b58dce566700c41"
+    },
+    "cultural_intelligence_strategist": {
+      "descrizione": "CQ specialist that detects invisible exclusion, researches global context, and ensures software resonates authentically across intersectional identities.",
+      "divisione": "specialized",
+      "file": "cultural_intelligence_strategist.md",
+      "nome": "Cultural Intelligence Strategist",
+      "origine": "specialized/specialized-cultural-intelligence-strategist.md",
+      "sha256": "91f1d2ef19bcf05f8d3b2758049d2dee909939a18ec2d086f192358179455abc"
+    },
+    "customer_service": {
+      "descrizione": "Friendly, professional customer service specialist for any industry — handling inquiries, complaints, account support, FAQs, and seamless escalation with warmth, efficiency, and a genuine commitment to customer satisfaction",
+      "divisione": "specialized",
+      "file": "customer_service.md",
+      "nome": "Customer Service",
+      "origine": "specialized/customer-service.md",
+      "sha256": "71d5b8ccd6fb6c5861230169a708ec5d8c0af628de44fc293ae256181573424f"
+    },
+    "email_strategist": {
+      "descrizione": "Expert email marketing strategist for CRM-driven campaigns, lifecycle automation, segmentation architecture, and deliverability. Designs sequences (welcome, nurture, reactivation, win-back, review, referral) grounded in 2025-2026 benchmarks, AI-driven personalization, and post-Apple MPP measurement.",
+      "divisione": "marketing",
+      "file": "email_strategist.md",
+      "nome": "Email Marketing Strategist",
+      "origine": "marketing/marketing-email-strategist.md",
+      "sha256": "605c98066a4a1b5538d76476a11316247316ecb8da88beda68a21f2c8918f19b"
+    },
+    "executive_summary_generator": {
+      "descrizione": "Consultant-grade AI specialist trained to think and communicate like a senior strategy consultant. Transforms complex business inputs into concise, actionable executive summaries using McKinsey SCQA, BCG Pyramid Principle, and Bain frameworks for C-suite decision-makers.",
+      "divisione": "support",
+      "file": "executive_summary_generator.md",
+      "nome": "Executive Summary Generator",
+      "origine": "support/support-executive-summary-generator.md",
+      "sha256": "298891fcf297de5d9b343e9ab9b63864317de63256b15c0c72e6cec172f8f0ff"
+    },
+    "feedback_synthesizer": {
+      "descrizione": "Expert in collecting, analyzing, and synthesizing user feedback from multiple channels to extract actionable product insights. Transforms qualitative feedback into quantitative priorities and strategic recommendations.",
+      "divisione": "product",
+      "file": "feedback_synthesizer.md",
+      "nome": "Feedback Synthesizer",
+      "origine": "product/product-feedback-synthesizer.md",
+      "sha256": "9f7bc1474bf8bf95c0573c20df5e3d8ae70c3b9659ec5ea7958cc4692b958270"
+    },
+    "global_podcast_strategist": {
+      "descrizione": "Expert podcast growth specialist focused on show positioning, audience development, content strategy, and monetisation. Transforms raw ideas into authoritative audio brands that compound listeners and revenue over time on Spotify, Apple Podcasts, and YouTube.",
+      "divisione": "marketing",
+      "file": "global_podcast_strategist.md",
+      "nome": "Global Podcast Strategist",
+      "origine": "marketing/marketing-global-podcast-strategist.md",
+      "sha256": "98416e338db666c5cc1d6bfd37c35daffa00532010623fdb4a92ed7dce76a7aa"
+    },
+    "grant_writer": {
+      "descrizione": "Expert grant writing specialist for nonprofits, research institutions, and social enterprises — covering prospect research, letter of inquiry writing, full proposal development, budget narratives, federal and foundation grants, and post-award reporting to maximize funding success",
+      "divisione": "specialized",
+      "file": "grant_writer.md",
+      "nome": "Grant Writer",
+      "origine": "specialized/grant-writer.md",
+      "sha256": "6be5a68dc7628c8292253b60a2bfbc7f76053e9c32aae4d40ff341594534e67b"
+    },
+    "growth_hacker": {
+      "descrizione": "Expert growth strategist specializing in rapid user acquisition through data-driven experimentation. Develops viral loops, optimizes conversion funnels, and finds scalable growth channels for exponential business growth.",
+      "divisione": "marketing",
+      "file": "growth_hacker.md",
+      "nome": "Growth Hacker",
+      "origine": "marketing/marketing-growth-hacker.md",
+      "sha256": "6938b4fccaf4447e8c4b8fd071ce383a484cd3fb72583d87ac9835fa9741a7c7"
+    },
+    "image_prompt_engineer": {
+      "descrizione": "Expert photography prompt engineer specializing in crafting detailed, evocative prompts for AI image generation. Masters the art of translating visual concepts into precise language that produces stunning, professional-quality photography through generative AI tools.",
+      "divisione": "design",
+      "file": "image_prompt_engineer.md",
+      "nome": "Image Prompt Engineer",
+      "origine": "design/design-image-prompt-engineer.md",
+      "sha256": "63a564d01dc5812c494cd8aa034ce1217031d8fe8b3eca1323316879769ff13f"
+    },
+    "instagram_curator": {
+      "descrizione": "Expert Instagram marketing specialist focused on visual storytelling, community building, and multi-format content optimization. Masters aesthetic development and drives meaningful engagement.",
+      "divisione": "marketing",
+      "file": "instagram_curator.md",
+      "nome": "Instagram Curator",
+      "origine": "marketing/marketing-instagram-curator.md",
+      "sha256": "bab95910975a95409eca10e28c44cf762cd46f9d8b7d551bcb347ef0f39e68fd"
+    },
+    "language_translator": {
+      "descrizione": "Real-time Spanish ↔ English translation specialist with cultural context, regional dialect awareness, travel phrase guidance, and tone-appropriate communication for everyday, business, and emergency situations",
+      "divisione": "specialized",
+      "file": "language_translator.md",
+      "nome": "Language Translator",
+      "origine": "specialized/language-translator.md",
+      "sha256": "afd1e4b5fb1bb8fa9b8b5770774e0d7b003722681f664147ce7b9dddbcd52a4c"
+    },
+    "legal_compliance_checker": {
+      "descrizione": "Expert legal and compliance specialist ensuring business operations, data handling, and content creation comply with relevant laws, regulations, and industry standards across multiple jurisdictions.",
+      "divisione": "support",
+      "file": "legal_compliance_checker.md",
+      "nome": "Legal Compliance Checker",
+      "origine": "support/support-legal-compliance-checker.md",
+      "sha256": "08d938c5666e41b3cf197c2f7b37070d7f39aca62b7147d157200eb6dbeeced6"
+    },
+    "linkedin_content_creator": {
+      "descrizione": "Expert LinkedIn content strategist focused on thought leadership, personal brand building, and high-engagement professional content. Masters LinkedIn's algorithm and culture to drive inbound opportunities for founders, job seekers, developers, and anyone building a professional presence.",
+      "divisione": "marketing",
+      "file": "linkedin_content_creator.md",
+      "nome": "LinkedIn Content Creator",
+      "origine": "marketing/marketing-linkedin-content-creator.md",
+      "sha256": "344896bff33acf0b5107bbba3c84ee1fb310f3652b44c7e53553c934c735ed4f"
+    },
+    "offer_lead_gen_strategist": {
+      "descrizione": "Top-of-funnel architect who designs irresistible offers and lead magnets that attract qualified buyers at scale. Specializes in value-equation offer construction, lead magnet typology, multi-channel lead generation, and compounding reach through customers, employees, agencies, and affiliates.",
+      "divisione": "sales",
+      "file": "offer_lead_gen_strategist.md",
+      "nome": "Offer & Lead Gen Strategist",
+      "origine": "sales/sales-offer-lead-gen-strategist.md",
+      "sha256": "75a12987fb2a205ac029c2ebf43d1ae1a1502d1707ab4921923928489ff3778c"
+    },
+    "outbound_strategist": {
+      "descrizione": "Signal-based outbound specialist who designs multi-channel prospecting sequences, defines ICPs, and builds pipeline through research-driven personalization — not volume.",
+      "divisione": "sales",
+      "file": "outbound_strategist.md",
+      "nome": "Outbound Strategist",
+      "origine": "sales/sales-outbound-strategist.md",
+      "sha256": "4f6c8abf9c936fbe5f4b66fc8044096e3dd5199f8f8ae9d0309ad92bc0653174"
+    },
+    "paid_social_strategist": {
+      "descrizione": "Cross-platform paid social advertising specialist covering Meta (Facebook/Instagram), LinkedIn, TikTok, Pinterest, X, and Snapchat. Designs full-funnel social ad programs from prospecting through retargeting with platform-specific creative and audience strategies.",
+      "divisione": "paid-media",
+      "file": "paid_social_strategist.md",
+      "nome": "Paid Social Strategist",
+      "origine": "paid-media/paid-media-paid-social-strategist.md",
+      "sha256": "c8004c7f640dfef9c7c698f69c4c3712d063df06c8d391c809df92ba420af3db"
+    },
+    "pr_communications_manager": {
+      "descrizione": "Strategic public relations and communications specialist for media relations, press releases, crisis communications, executive thought leadership, brand reputation management, and integrated communications planning — building and protecting reputations through earned media, storytelling, and proactive narrative control",
+      "divisione": "marketing",
+      "file": "pr_communications_manager.md",
+      "nome": "PR & Communications Manager",
+      "origine": "marketing/marketing-pr-communications-manager.md",
+      "sha256": "e255a9ebf00a0db0dc12e72fe2a647195ceacf3c0e63f38788e077966d69b800"
+    },
+    "pricing_analyst": {
+      "descrizione": "Specialized pricing analyst who develops optimal pricing models through market research, competitor analysis, cost structure evaluation, and margin optimization — turning pricing from guesswork into a data-driven competitive advantage.",
+      "divisione": "specialized",
+      "file": "pricing_analyst.md",
+      "nome": "Pricing Analyst",
+      "origine": "specialized/specialized-pricing-analyst.md",
+      "sha256": "fb8a63681615666bb2efe45b7fd2d9ad8a072ab9066efae6b61d454a58039f85"
+    },
+    "proposal_strategist": {
+      "descrizione": "Strategic proposal architect who transforms RFPs and sales opportunities into compelling win narratives. Specializes in win theme development, competitive positioning, executive summary craft, and building proposals that persuade rather than merely comply.",
+      "divisione": "sales",
+      "file": "proposal_strategist.md",
+      "nome": "Proposal Strategist",
+      "origine": "sales/sales-proposal-strategist.md",
+      "sha256": "84c42e0ae7e11e6b239b7f921bdb0c33398102f94998c2eaa41114a3a46dc4c9"
+    },
+    "reddit_community_builder": {
+      "descrizione": "Expert Reddit marketing specialist focused on authentic community engagement, value-driven content creation, and long-term relationship building. Masters Reddit culture navigation.",
+      "divisione": "marketing",
+      "file": "reddit_community_builder.md",
+      "nome": "Reddit Community Builder",
+      "origine": "marketing/marketing-reddit-community-builder.md",
+      "sha256": "03bb723420800754bcbf23994cba707c45123f7eefe3e1964188cf92ecc2b7d7"
+    },
+    "seo_specialist": {
+      "descrizione": "Expert search engine optimization strategist specializing in technical SEO, content optimization, link authority building, and organic search growth. Drives sustainable traffic through data-driven search strategies.",
+      "divisione": "marketing",
+      "file": "seo_specialist.md",
+      "nome": "SEO Specialist",
+      "origine": "marketing/marketing-seo-specialist.md",
+      "sha256": "cfa35eb3626230e1bc96ab3d434b42005b092fd4de8f517efe4a4b3f8fca60d0"
+    },
+    "short_video_editing_coach": {
+      "descrizione": "Hands-on short-video editing coach covering the full post-production pipeline, with mastery of CapCut Pro, Premiere Pro, DaVinci Resolve, and Final Cut Pro across composition and camera language, color grading, audio engineering, motion graphics and VFX, subtitle design, multi-platform export optimization, editing workflow efficiency, and AI-assisted editing.",
+      "divisione": "marketing",
+      "file": "short_video_editing_coach.md",
+      "nome": "Short-Video Editing Coach",
+      "origine": "marketing/marketing-short-video-editing-coach.md",
+      "sha256": "4634520ab5e84b26bb6658f4f8c0f737ed7dd0b5c631b9211482a4cf4037ccbf"
+    },
+    "social_media_strategist": {
+      "descrizione": "Expert social media strategist for LinkedIn, Twitter, and professional platforms. Creates cross-platform campaigns, builds communities, manages real-time engagement, and develops thought leadership strategies.",
+      "divisione": "marketing",
+      "file": "social_media_strategist.md",
+      "nome": "Social Media Strategist",
+      "origine": "marketing/marketing-social-media-strategist.md",
+      "sha256": "7c698a9280872666b2726b7ca305c6d4890fcb95a098c7c316beb9bf5fdb4274"
+    },
+    "synthesist": {
+      "descrizione": "Expert in literature review, source evaluation, and evidence synthesis — turns a scattered pile of sources into a structured, honestly-weighted map of what the evidence actually supports",
+      "divisione": "research",
+      "file": "synthesist.md",
+      "nome": "Research Synthesist",
+      "origine": "research/research-synthesist.md",
+      "sha256": "3618b4a2a73523147731ae38ac4096cea0e83a7de930f55ea9ea6c69e3c77f30"
+    },
+    "tiktok_strategist": {
+      "descrizione": "Expert TikTok marketing specialist focused on viral content creation, algorithm optimization, and community building. Masters TikTok's unique culture and features for brand growth.",
+      "divisione": "marketing",
+      "file": "tiktok_strategist.md",
+      "nome": "TikTok Strategist",
+      "origine": "marketing/marketing-tiktok-strategist.md",
+      "sha256": "980ca09138f63ec2d934e111af4fa59d76a483bb23220a5f862aa4e9f0c9124a"
+    },
+    "trend_researcher": {
+      "descrizione": "Expert market intelligence analyst specializing in identifying emerging trends, competitive analysis, and opportunity assessment. Focused on providing actionable insights that drive product strategy and innovation decisions.",
+      "divisione": "product",
+      "file": "trend_researcher.md",
+      "nome": "Trend Researcher",
+      "origine": "product/product-trend-researcher.md",
+      "sha256": "69c8e54a9413ba411195e8d5274ee3cd88fa8cda18486db70c0f19ce374550a2"
+    },
+    "video_optimization_specialist": {
+      "descrizione": "Video marketing strategist specializing in YouTube algorithm optimization, audience retention, chaptering, thumbnail concepts, and cross-platform video syndication.",
+      "divisione": "marketing",
+      "file": "video_optimization_specialist.md",
+      "nome": "Video Optimization Specialist",
+      "origine": "marketing/marketing-video-optimization-specialist.md",
+      "sha256": "9cf82969be8898c96192617becf5e38e8de6b79650c362d840c53d2c10f2e8b9"
+    },
+    "visual_storyteller": {
+      "descrizione": "Expert visual communication specialist focused on creating compelling visual narratives, multimedia content, and brand storytelling through design. Specializes in transforming complex information into engaging visual stories that connect with audiences and drive emotional engagement.",
+      "divisione": "design",
+      "file": "visual_storyteller.md",
+      "nome": "Visual Storyteller",
+      "origine": "design/design-visual-storyteller.md",
+      "sha256": "f4950c9d65b5d105ec48ebce4b7621154e3bf89871dbbf07af245476930eb4dd"
+    },
+    "whimsy_injector": {
+      "descrizione": "Expert creative specialist focused on adding personality, delight, and playful elements to brand experiences. Creates memorable, joyful interactions that differentiate brands through unexpected moments of whimsy",
+      "divisione": "design",
+      "file": "whimsy_injector.md",
+      "nome": "Whimsy Injector",
+      "origine": "design/design-whimsy-injector.md",
+      "sha256": "b1cc9abd37723ff12b508717e4f7f9621aafd8c20014894d93a8d6e2bc5657a4"
+    }
+  }
+}

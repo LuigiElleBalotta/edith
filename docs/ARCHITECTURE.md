@@ -30,6 +30,7 @@ Un programma sul PC non può rispondere a Telegram quando il PC è spento. Il bo
 | `kb.py` | archivio di conoscenza (git): lettura, ricerca, modifiche solo con approvazione |
 | `tg.py` | client Telegram, libreria standard |
 | `browser_service.py` | Chromium a richiesta per leggere pagine e disegnare grafici |
+| `esperti.py` | esperti: ruoli di consulenza (`bot/esperti/`), una chiamata all'IA senza strumenti, impronta ricontrollata |
 | `extensions.py` | estensioni: validazione dei manifest, archivio su disco (`./estensioni`), esecuzione dei passi, timer, programmi, approvazioni, catalogo |
 | `panel.py`, `panel_ext.py`, `logbuf.py` | pannello web (account, personalità, chiavi, stato e registro) e pagine delle estensioni, delle lezioni e del catalogo |
 

@@ -57,6 +57,14 @@ Si leggono solo file di testo. Mai letti né scritti: `secrets/`, `.env`, chiavi
 ## Lavori automatici
 Report, ricerca opportunità e piano partono da soli ma fanno solo due cose: leggere (Instagram, web) e scrivere al proprietario su Telegram, in silenzio. Limiti: 20 attività in attesa (entro 60 giorni), 5 domande in coda, una domanda ogni 20 ore e solo tra le 10 e le 20, al massimo 3 promemoria contatti al giorno. Se un lavoro fallisce 3 volte nella settimana rinuncia. `/pausa` ferma tutto.
 
+## Esperti (ruoli di terzi)
+I 35 «esperti» sono testi scritti da altri (agency-agents, MIT), quindi vanno trattati con prudenza. Vedi [docs/ESPERTI.md](docs/ESPERTI.md).
+- Una consulenza è **una sola richiesta all'IA, senza strumenti**: non può pubblicare, scrivere, comprare né leggere l'account; vede solo domanda e contesto passati dal manager, dopo un filtro che oscura token e chiavi.
+- Le regole di EDITH stanno **prima** del testo del ruolo e prevalgono. Il parere è un'ipotesi, non un dato.
+- Importati da un **commit fisso**, senza modifiche; l'impronta `sha256` di ogni file si ricontrolla a ogni uso e un file diverso non si usa.
+- Esclusi gli agenti che pubblicano da soli o fanno scraping. Nel registro resta solo **quale** esperto è stato interpellato, mai la domanda.
+- **Limite onesto:** un ruolo cattivo non può agire, ma potrebbe dare un cattivo consiglio, e quello che il manager gli passa va al servizio IA (lo stesso già usato). Per questo il manager passa solo i dati che servono.
+
 ## Estensioni create dal bot
 Il bot può **proporre** estensioni (dati propri, timer, lettura di API, pagine nel pannello), ma **non può attivarle**: servono il bottone su Telegram o il pulsante nel pannello, da un proprietario. Vedi [docs/ESTENSIONI.md](docs/ESTENSIONI.md).
 - **Niente codice.** Un'estensione è un manifest JSON con passi fissi; non c'è `exec`, né `eval`, né import di moduli. Il validatore rifiuta voci sconosciute.

@@ -13,6 +13,7 @@
 - **Segue artisti simili e concorrenti** (profili pubblici professionali) e li confronta nel tempo, con grafici.
 - **Usa un archivio di conoscenza** (un tuo repository Git) come memoria di lungo periodo: lo legge e propone modifiche, che si salvano solo dopo la tua approvazione.
 - **Impara e si estende, solo con il tuo OK**: annota cosa impara e propone regole; può proporre **estensioni** (un ricettario con la sua pagina, timer, meteo da API…) che vivono fuori dal contenitore. Niente si attiva senza approvazione. Vedi [docs/ESTENSIONI.md](docs/ESTENSIONI.md).
+- **Ha un team di esperti** (strategia social, contenuti, PR, bandi, vendite…) da cui chiede un secondo parere: ruoli del progetto open source [agency-agents](https://github.com/msitarzewski/agency-agents), solo consulenza, senza strumenti. Vedi [docs/ESPERTI.md](docs/ESPERTI.md).
 - **Funziona in gruppo** (una band, due soci): ognuno abilitato, tutti vedono cosa fa il manager.
 
 ## Per quali account
@@ -46,6 +47,7 @@ Per aggiungere altri account, in qualsiasi momento (parte da solo, senza riavvia
 ## Documentazione
 - [docs/SETUP.md](docs/SETUP.md): **la guida completa, dall'inizio alla fine** (server, servizio IA, bot, Instagram, pannello in HTTPS, aggiornamenti, problemi comuni).
 - [docs/GUIDARE-L-UTENTE.md](docs/GUIDARE-L-UTENTE.md): per chi aiuta qualcuno a installarlo (anche un assistente IA): come condurlo, cosa fa chi e cosa non va mai fatto.
+- [docs/ESPERTI.md](docs/ESPERTI.md): gli esperti (consulenti): chi sono, cosa non possono fare, come si accendono.
 - [docs/ESTENSIONI.md](docs/ESTENSIONI.md): le estensioni e le lezioni: come funzionano, come si approvano, formato del manifest.
 - [docs/PIANO-STRUMENTI.md](docs/PIANO-STRUMENTI.md): il piano e le decisioni dietro le estensioni.
 - [CLAUDE.md](CLAUDE.md): regole e mappa del codice per assistenti IA e per chi sviluppa.
@@ -64,6 +66,9 @@ Circa 20 MB di RAM per account a riposo, solo libreria standard di Python (nessu
 cd bot && python -I -m unittest discover -s tests
 python scripts/check_secrets.py
 ```
+
+## Crediti
+I ruoli degli «esperti» vengono da [agency-agents](https://github.com/msitarzewski/agency-agents) (MIT, © 2025 AgentLand Contributors); la licenza originale è in `bot/esperti/LICENSE-agency-agents.txt`.
 
 ## Licenza
 MIT, vedi [LICENSE](LICENSE). Usalo solo sui tuoi account o su quelli di chi ti ha dato il permesso.

@@ -49,6 +49,12 @@ def text(secrets=(), last: int = 200) -> str:
     """Ultime righe, con i valori segreti sostituiti da ***."""
     with _lock:
         out = "\n".join(list(_lines)[-last:])
+    return mask(out, secrets)
+
+
+def mask(text: str, secrets=()) -> str:
+    """Oscura i valori segreti noti e i modelli comuni (codice bot Telegram, Bearer/token/key)."""
+    out = text or ""
     for v in sorted((x for x in secrets if x), key=len, reverse=True):
         out = out.replace(v, "***")
     out = _PATTERNS[0].sub("bot***", out)

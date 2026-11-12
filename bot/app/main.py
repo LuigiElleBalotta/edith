@@ -525,9 +525,15 @@ def run_account(cfg, stop=None) -> int:
     def _secret(ext_id, key):  # i segreti delle estensioni stanno in account.env, mai nel manifest
         return cfgmod.parse_env_file(os.path.join(db.profile_dir, "account.env")).get(ext.secret_env_name(ext_id, key), "")
     runtime = ext.Runtime(ext.store_for(db), db, ask=_ask, secrets=_secret)
+    from . import esperti as esp
+
+    def _consulta(eid, richiesta, contesto=""):  # UNA chiamata all'IA, senza strumenti: l'esperto dà solo un parere
+        def _ask_esperto(system, user):
+            return ai.chat(cfg.model_normal, [{"role": "system", "content": system}, {"role": "user", "content": user}], max_tokens=1500)
+        return esp.consult(_ask_esperto, eid, richiesta, contesto, spenti=prof.load(db.profile_dir).get("esperti_spenti") or [])
     tools = Tools(db, ig, cfg.browser_url, cfg.browser_token,
                   search=omniroute_search(cfg.ai_base_url, cfg.ai_api_key), kb=kb if kb.configured else None,
-                  disabled=profilo.get("strumenti_spenti") or (), ext=runtime)
+                  disabled=profilo.get("strumenti_spenti") or (), ext=runtime, consult=_consulta)
     agent = Agent(ai, cfg, db, tools)
     jobs = jobs_for(profilo)
     try:

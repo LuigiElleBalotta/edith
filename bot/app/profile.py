@@ -14,13 +14,14 @@ Campi (tutti facoltativi):
 - tastiera: tasti rapidi sotto la barra di scrittura, elenco di righe di comandi (es. [["/contatti", "/agenda"]]);
 - utenti: {"ID Telegram": "Nome"} per sapere chi parla quando il bot ha più proprietari;
 - lavori: lavori automatici propri dell'account {nome: {weekday|None, hour, minute, prompt, reason, deliver, cond}};
+- esperti_spenti: id degli esperti (consulenti) da non interpellare per questo account;
 - riproponi_dopo_giorni: dopo quanti giorni il manager può riproporre una regola che hai rifiutato (predefinito 14);
 - kb: {repo, branch, write_branch} archivio di conoscenza (la chiave di accesso è nell'ambiente, mai qui).
 """
 import json
 import os
 
-DEFAULTS = {"proprietario": "", "ambito": "", "identita": "", "regole_extra": [], "strumenti_spenti": [], "lavori_spenti": [], "lavori": {}, "kb": {}, "utenti": {}, "benvenuto": "", "tastiera": [], "riproponi_dopo_giorni": 14}
+DEFAULTS = {"proprietario": "", "ambito": "", "identita": "", "regole_extra": [], "strumenti_spenti": [], "lavori_spenti": [], "lavori": {}, "kb": {}, "utenti": {}, "benvenuto": "", "tastiera": [], "riproponi_dopo_giorni": 14, "esperti_spenti": []}
 
 
 def load(data_dir) -> dict:
@@ -80,3 +81,32 @@ def apply_rule(data_dir, azione: str, nuovo: str = "", vecchio: str = "") -> str
         f.write(chr(10))
     os.replace(tmp, path)
     return "Regola aggiornata."
+
+
+def set_expert(data_dir, eid: str, on: bool) -> list:
+    """Accende o spegne un esperto per questo account: cambia SOLO esperti_spenti in profile.json. Ritorna l'elenco dei spenti."""
+    import re
+    import tempfile
+    if not re.match(r"^[a-z][a-z0-9_]{1,40}$", eid or ""):
+        raise ValueError("id esperto non valido")
+    path = os.path.join(data_dir, "profile.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            data = {}
+    except (OSError, ValueError):
+        data = {}
+    spenti = [str(x) for x in (data.get("esperti_spenti") or [])]
+    if on and eid in spenti:
+        spenti.remove(eid)
+    elif not on and eid not in spenti:
+        spenti.append(eid)
+    data["esperti_spenti"] = sorted(spenti)
+    os.makedirs(data_dir, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=data_dir, prefix=".profile-")
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+        f.write(chr(10))
+    os.replace(tmp, path)
+    return data["esperti_spenti"]
