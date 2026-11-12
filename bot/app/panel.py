@@ -109,12 +109,14 @@ def page(title: str, body: str, csrf: str = "", logged: bool = True) -> str:
     if logged:
         nav = ('<header class="border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"><div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">'
                '<a href="/" class="e-brand">' + _logo() + '<span><b>E.D.I.T.H.</b><small>Manager social</small></span></a>'
+               '<span class="e-online"><i class="e-led e-led-on"></i>sistemi in linea</span>'
                f'<form method="post" action="/logout"><input type="hidden" name="csrf" value="{H(csrf)}">'
                '<button class="text-sm text-slate-600 underline hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">Esci</button></form></div></header>')
     return ('<!doctype html><html lang="it" class="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#050b17">'
             f'<title>{H(title)} · EDITH</title><link rel="stylesheet" href="/static/panel.css"></head>'
             '<body class="min-h-screen bg-slate-50 text-base leading-relaxed text-slate-900 antialiased dark:bg-slate-900 dark:text-slate-100">'
-            f'{nav}<main class="mx-auto max-w-3xl px-4 pb-16 pt-6">{body}</main></body></html>')
+            f'{nav}<main class="mx-auto max-w-3xl px-4 pb-10 pt-6">{body}</main>'
+            '<footer class="e-foot">E.D.I.T.H. &middot; Even Dead, I&rsquo;m The Hero</footer></body></html>')
 
 
 def update_env(path: str, updates: dict, remove=()) -> None:
@@ -296,30 +298,52 @@ class Panel:
         return bool(cfgmod.parse_env_file(os.path.join(cfg.profile_dir, "account.env")).get("OMNIROUTE_API_KEY"))
 
     def dashboard(self, s) -> str:
+        from . import panel_ext
         cfgs, errs = self.accounts()
         run = self.control.running() if self.control else {}
         bad = "".join(flash(err=f"«{n}» non si avvia: {w}") for n, w in errs)
-        cards = ""
+        cards, msgs, online, da_approvare = "", 0, 0, 0
         for c in cfgs:
             st = self.stats(c)
             on = run.get(c.slug)
-            stato = pill("attivo", "ok") if on else (pill("fermo", "no") if on is not None else pill("stato sconosciuto"))
+            online += 1 if on else 0
+            msgs += st["messaggi"] or 0
+            n_ap = panel_ext.pending_count(self, c)
+            da_approvare += n_ap
+            led = "e-led-on" if on else ("e-led-off" if on is not None else "e-led-unk")
+            stato = "in linea" if on else ("ferma" if on is not None else "stato ignoto")
             chips = " ".join((pill("Instagram collegato", "ok") if c.ig_token else pill("Instagram non collegato"),
                               pill("archivio collegato", "ok") if self._kb(c) else pill("senza archivio"),
-                              pill(f'{st["messaggi"]} messaggi') if st["messaggi"] is not None else pill("nessun messaggio")))
+                              pill(f'{st["messaggi"]} messaggi') if st["messaggi"] is not None else pill("nessun messaggio"),
+                              pill(f"{n_ap} da approvare", "no") if n_ap else ""))
             bot = f'@{H(st["bot"])} su Telegram' if st["bot"] else "bot non ancora avviato"
-            cards += (f'<a href="/account/{H(c.slug)}" class="mt-4 block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-indigo-400 hover:shadow dark:border-slate-700 dark:bg-slate-800">'
-                      f'<div class="flex items-center justify-between gap-3"><h2 class="text-lg font-semibold">{H(c.slug)}</h2>{stato}</div>'
+            cards += (f'<a href="/account/{H(c.slug)}" class="e-module mt-4 block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-indigo-400 hover:shadow dark:border-slate-700 dark:bg-slate-800">'
+                      f'<div class="flex items-center justify-between gap-3"><h2 class="text-lg font-semibold">{H(c.slug)}</h2><span class="e-status"><i class="e-led {led}"></i>{stato}</span></div>'
                       f'<p class="mt-1 text-slate-600 dark:text-slate-300">{bot}</p><div class="mt-3 flex flex-wrap gap-2">{chips}</div>'
-                      '<p class="mt-3 text-sm font-medium text-indigo-600 dark:text-indigo-400">Apri e modifica →</p></a>')
+                      '<p class="e-open mt-3 text-sm font-medium">Apri il modulo →</p></a>')
         if not cfgs:
-            cards = card("Non c'è ancora nessun account", "Un account è un profilo social (una persona, una band, un'attività) con il suo bot Telegram. Crealo qui sotto: ti guido passo passo.", "")
-        intro = ('<h1 class="text-2xl font-bold">I tuoi account</h1>'
-                 '<p class="mt-2 text-slate-600 dark:text-slate-300">Ogni account è un manager social che ti scrive su Telegram. '
-                 'Clicca un account per cambiare come parla, chi può usarlo e le chiavi che usa.</p>')
+            cards = card("Nessun account in vista", "Un account è un profilo social (una persona, una band, un'attività) con il suo bot Telegram. Creane uno e lo accendo subito: ti guido passo passo.", "")
+        tot = len(cfgs)
+        if not tot:
+            saluto = "Il visore è acceso, ma non c'è ancora nessuno da seguire."
+        elif online == tot:
+            saluto = "Tutti i sistemi sono in linea e io sono pronta a divertirmi. Scegli un account e si parte."
+        elif run:
+            saluto = "Qualche modulo è fermo: dai un'occhiata ai registri, ci penso io a rimetterlo in piedi."
+        else:
+            saluto = "Visore calibrato. Scegli un account e si parte."
+        hero = ('<section class="e-hud"><div class="e-hud-logo">' + _logo() + '</div><div class="e-hud-text">'
+                '<p class="e-kicker">Ciao, sono</p><h1 class="e-title">E.D.I.T.H.</h1>'
+                f'<p class="e-type">{H(saluto)}</p></div></section>')
+        tiles = ('<div class="e-tiles">'
+                 f'<div class="e-tile"><b>{tot}</b><span>account</span></div>'
+                 f'<div class="e-tile"><b>{online}<small>/{tot}</small></b><span>in linea</span></div>'
+                 f'<div class="e-tile"><b>{msgs}</b><span>messaggi</span></div>'
+                 f'<div class="e-tile{" e-tile-warn" if da_approvare else ""}"><b>{da_approvare}</b><span>da approvare</span></div></div>')
         actions = ('<div class="mt-6 flex flex-wrap gap-3">' + link("+ Nuovo account", "/accounts/new") + link("Stato e registro", "/system", "ghost") + "</div>"
                    f'<p class="{HELP}">«Nuovo account» ti guida in 5 passi (circa 5 minuti). «Stato e registro» mostra cosa sta facendo il programma.</p>')
-        return page("Account", intro + bad + actions + cards, s["csrf"])
+        titolo = '<h2 class="e-section-title">I tuoi moduli</h2><p class="mt-1 text-slate-600 dark:text-slate-300">Ogni account è un manager social che ti scrive su Telegram. Aprine uno per cambiare come parla, chi può usarlo e le chiavi che usa.</p>'
+        return page("Account", hero + tiles + bad + actions + titolo + cards, s["csrf"])
 
     def account_page(self, s, cfg, msg: str = "", err: str = "") -> str:
         p = self._profile(cfg)
@@ -706,7 +730,8 @@ def make_handler(panel: Panel):
                     + f'<div class="mt-5">{btn("Entra")}</div></form>')
             return page("Accesso", '<div class="mx-auto mt-12 max-w-sm"><div class="e-hero">' + _logo() + '<h1 class="text-3xl font-bold">E.D.I.T.H.</h1>'
                         '<p class="e-tag">Even Dead, I\'m The Hero</p></div>'
-                        '<p class="mt-6 text-center text-slate-600 dark:text-slate-300">Pannello di configurazione. Entra con la password del pannello.</p>' + e + card("", "", form) + "</div>", logged=False)
+                        '<ul class="e-boot"><li>Avvio dei sistemi&hellip; <b>fatto</b></li><li>Visore calibrato <b>ok</b></li><li>Ti aspettavo. Entra pure.</li></ul>'
+                        '<p class="mt-4 text-center text-slate-600 dark:text-slate-300">Pannello di controllo. Serve la password del pannello.</p>' + e + card("", "", form) + "</div>", logged=False)
 
         # --- richieste ---
         def do_GET(self):

@@ -79,3 +79,68 @@ html.dark ::selection { background: rgba(255, 138, 31, 0.45); color: #fff; }
 .e-hero svg { display: block; margin: 0 auto; width: 5.5rem; height: 5.5rem; filter: drop-shadow(0 0 16px rgba(255, 154, 46, 0.6)); }
 .e-hero h1 { margin-top: 0.75rem; font-size: 2.1rem; letter-spacing: 0.42em; padding-left: 0.42em; text-transform: uppercase; color: #fff; text-shadow: 0 0 26px rgba(95, 216, 242, 0.4); }
 .e-hero p.e-tag { margin-top: 0.4rem; font-size: 0.72rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--e-cyan); }
+
+/* ---- Visore: intestazione, scansione, moduli ---- */
+html.dark body::after {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 50;
+  background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.022) 0, rgba(255, 255, 255, 0.022) 1px, transparent 1px, transparent 3px);
+  mix-blend-mode: overlay;
+}
+html.dark body::before {
+  content: ""; position: fixed; left: 0; right: 0; top: -20%; height: 18%; pointer-events: none; z-index: 49;
+  background: linear-gradient(180deg, transparent, rgba(95, 216, 242, 0.07), transparent);
+  animation: e-sweep 9s linear infinite;
+}
+@keyframes e-sweep { to { transform: translateY(700%); } }
+@keyframes e-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+@keyframes e-caret { 50% { border-color: transparent; } }
+@keyframes e-type { from { max-width: 0; } to { max-width: 100%; } }
+@keyframes e-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.e-led { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 0.45rem; vertical-align: middle; }
+.e-led-on { background: #3ee6a0; box-shadow: 0 0 9px #3ee6a0; animation: e-blink 2.4s ease-in-out infinite; }
+.e-led-off { background: #ff5a5a; box-shadow: 0 0 9px #ff5a5a; }
+.e-led-unk { background: #7f9dbd; }
+.e-online { font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: #8fe9c4; }
+@media (max-width: 520px) { .e-online { display: none; } }
+.e-status { font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--e-cyan); white-space: nowrap; }
+.e-foot { text-align: center; font-size: 0.68rem; letter-spacing: 0.24em; text-transform: uppercase; color: #4f6e92; padding: 0 1rem 2.2rem; }
+
+.e-hud { display: flex; align-items: center; gap: 1.4rem; padding: 1.4rem 1.5rem; margin-top: 0 !important; }
+.e-hud-logo svg { width: 6.5rem; height: 6.5rem; display: block; filter: drop-shadow(0 0 18px rgba(255, 154, 46, 0.6)); }
+.e-hud-text { min-width: 0; }
+.e-kicker { font-size: 0.78rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--e-cyan); }
+.e-title { font-size: 2.3rem !important; line-height: 1.1; letter-spacing: 0.34em !important; text-transform: uppercase; }
+.e-type { margin-top: 0.6rem; display: inline-block; max-width: 100%; overflow: hidden; white-space: nowrap; border-right: 2px solid var(--e-amber); color: #cfe3f3;
+  animation: e-type 3.2s steps(52, end) 0.3s both, e-caret 0.9s step-end infinite; }
+@media (max-width: 640px) { .e-hud { flex-direction: column; text-align: center; } .e-title { font-size: 1.7rem !important; letter-spacing: 0.22em !important; } .e-type { white-space: normal; border-right: 0; animation: e-rise 0.8s both; } }
+@media (prefers-reduced-motion: reduce) { .e-type { animation: none; white-space: normal; border-right: 0; } html.dark body::before { animation: none; display: none; } .e-led-on { animation: none; } }
+
+.e-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.7rem; margin-top: 1rem; }
+@media (max-width: 560px) { .e-tiles { grid-template-columns: repeat(2, 1fr); } }
+.e-tile { position: relative; padding: 0.8rem 0.9rem; border: 1px solid var(--e-line); border-radius: 0.7rem; background: linear-gradient(180deg, rgba(12, 26, 46, 0.85), rgba(5, 11, 23, 0.85)); overflow: hidden; animation: e-rise 0.6s both; }
+.e-tile::after { content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; background: linear-gradient(90deg, var(--e-cyan), transparent); opacity: 0.7; }
+.e-tile b { display: block; font-size: 1.7rem; line-height: 1.1; color: #fff; text-shadow: 0 0 14px rgba(95, 216, 242, 0.45); font-variant-numeric: tabular-nums; }
+.e-tile b small { font-size: 0.95rem; color: #7f9dbd; }
+.e-tile span { font-size: 0.68rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--e-cyan); }
+.e-tile-warn { border-color: rgba(255, 154, 46, 0.7); }
+.e-tile-warn b { color: #ffb865; text-shadow: 0 0 14px rgba(255, 138, 31, 0.6); }
+.e-tile-warn::after { background: linear-gradient(90deg, var(--e-amber), transparent); }
+.e-tile:nth-child(2) { animation-delay: 0.08s; } .e-tile:nth-child(3) { animation-delay: 0.16s; } .e-tile:nth-child(4) { animation-delay: 0.24s; }
+
+.e-section-title { margin-top: 2rem; font-size: 0.9rem !important; letter-spacing: 0.28em; text-transform: uppercase; color: var(--e-cyan); display: flex; align-items: center; gap: 0.6rem; }
+.e-section-title::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--e-line), transparent); }
+html.dark a.e-module {
+  position: relative; background: var(--e-panel); border-color: var(--e-line); overflow: hidden; backdrop-filter: blur(6px);
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+html.dark a.e-module::before { content: ""; position: absolute; top: 0; bottom: 0; left: -40%; width: 30%; background: linear-gradient(90deg, transparent, rgba(255, 154, 46, 0.12), transparent); transform: skewX(-18deg); transition: left 0.7s; }
+html.dark a.e-module:hover { border-color: var(--e-amber); box-shadow: 0 0 28px rgba(255, 138, 31, 0.22); transform: translateY(-1px); }
+html.dark a.e-module:hover::before { left: 120%; }
+html.dark a.e-module h2 { color: #fff; letter-spacing: 0.06em; font-size: 1.15rem; }
+.e-open { color: var(--e-amber); letter-spacing: 0.08em; }
+
+.e-boot { list-style: none; margin: 1.2rem auto 0; padding: 0; max-width: 20rem; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 0.78rem; color: #8fb3d1; }
+.e-boot li { opacity: 0; animation: e-rise 0.5s forwards; padding: 0.12rem 0; }
+.e-boot li::before { content: "\25AA "; color: var(--e-amber); }
+.e-boot li:nth-child(1) { animation-delay: 0.3s; } .e-boot li:nth-child(2) { animation-delay: 0.9s; } .e-boot li:nth-child(3) { animation-delay: 1.5s; color: var(--e-cyan); }
+.e-boot b { color: #3ee6a0; font-weight: 600; }
