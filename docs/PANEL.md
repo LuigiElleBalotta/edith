@@ -14,6 +14,7 @@ Ogni campo ha sotto una riga che spiega a cosa serve, con un esempio.
 
 - **Estensioni** (dentro ogni account): elenco, pagina di ciascuna con impostazioni e tabelle modificabili, «Da approvare» (le proposte del manager), spegni/accendi, versioni, «Esegui ora». Vedi [ESTENSIONI.md](ESTENSIONI.md).
 - **Cosa ha imparato**: le lezioni del manager e le sue proposte di regole; «Non riproporre più».
+- **Posta** (menu in alto): il server SMTP comune a tutti gli account, con la mail di prova; nell'account, la voce **Posta** imposta la posta propria, che vince sulla comune. Vedi [POSTA.md](POSTA.md).
 - **Archivio**: le note e le tabelle dell'account. Senza Git: «Crea l'archivio interno», poi scrivi e modifichi i file da qui. Con Git: incolli l'indirizzo SSH del repository e aggiungi la chiave che ti mostro come «Deploy key». Uguale per tutti gli account.
 - **Biblioteca**: carica un file (PDF, Word, PowerPoint, testo, fino a 25 MB), un link o un testo; vedi i documenti, lo stato dello studio, il riassunto; studia di nuovo o elimina. Vedi [BIBLIOTECA.md](BIBLIOTECA.md).
 - **Esperti**: accendi o spegni i consulenti che il manager può interpellare, per questo account. Vedi [ESPERTI.md](ESPERTI.md).
