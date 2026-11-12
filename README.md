@@ -45,6 +45,7 @@ Per aggiungere altri account, in qualsiasi momento (parte da solo, senza riavvia
 ## Documentazione
 - [docs/SETUP.md](docs/SETUP.md): **la guida completa, dall'inizio alla fine** (server, servizio IA, bot, Instagram, pannello in HTTPS, aggiornamenti, problemi comuni).
 - [docs/GUIDARE-L-UTENTE.md](docs/GUIDARE-L-UTENTE.md): per chi aiuta qualcuno a installarlo (anche un assistente IA): come condurlo, cosa fa chi e cosa non va mai fatto.
+- [docs/PIANO-STRUMENTI.md](docs/PIANO-STRUMENTI.md): **proposta in corso**: un assistente che impara e si costruisce da solo gli strumenti e le pagine del pannello, sempre con la tua approvazione.
 - [CLAUDE.md](CLAUDE.md): regole e mappa del codice per assistenti IA e per chi sviluppa.
 - [docs/ACCOUNTS.md](docs/ACCOUNTS.md): più account, personalità (`profile.json`), gruppo condiviso, archivio di conoscenza, promemoria contatti.
 - [docs/PANEL.md](docs/PANEL.md): il pannello web di configurazione (solo da localhost, con password).
