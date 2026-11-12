@@ -5,16 +5,16 @@
 > *English, in short:* a self-hosted Telegram assistant (Italian-speaking) that studies your Instagram account through the official Meta API (read-only), builds an editorial plan, keeps a pipeline of people to contact, researches opportunities and sends weekly reports. It **never posts, comments, sends messages or applies on its own**: it prepares drafts and waits for your approval. One container, many accounts, each with its own personality.
 
 ## Cosa fa
-- **Parla con te su Telegram** in italiano semplice, ricorda tutto (anche dopo un riavvio) e funziona con il PC spento.
+- **Parla con te su Telegram** in italiano semplice, ricorda tutto (anche dopo un riavvio) e funziona con il PC spento. Di serie ha la **voce di E.D.I.T.H.** (sicura, vivace, un filo sfacciata, mai a scapito di onestà e regole): per ogni account si sceglie anche una voce neutra o descritta da te.
 - **Studia il tuo Instagram** con le API ufficiali di Meta, in sola lettura: post, statistiche, pubblico, commenti. Importa da solo ogni giorno.
 - **Fa il piano editoriale** (30 giorni), lo rinnova prima che finisca e lo propone con i bottoni Approva / Rifiuta / Cambia.
 - **Ricorda di scrivere ai contatti** (locali, festival, organizzatori, clienti, partner): fino a 3 promemoria al giorno con i bottoni Fatto / Domani / Escludi, e prepara la bozza del messaggio.
 - **Cerca opportunità** (concorsi, bandi, festival) con fonte e data, e manda un **report settimanale**.
 - **Segue artisti simili e concorrenti** (profili pubblici professionali) e li confronta nel tempo, con grafici.
-- **Usa un archivio di conoscenza** (un tuo repository Git) come memoria di lungo periodo: lo legge e propone modifiche, che si salvano solo dopo la tua approvazione.
+- **Usa un archivio di conoscenza** come memoria di lungo periodo: note e tabelle che scrivi dal pannello (archivio interno, senza Git) oppure un tuo repository Git. Lo legge e propone modifiche, che si salvano solo dopo la tua approvazione. Uguale per tutti gli account.
 - **Impara e si estende, solo con il tuo OK**: annota cosa impara e propone regole; può proporre **estensioni** (un ricettario con la sua pagina, timer, meteo da API…) che vivono fuori dal contenitore. Niente si attiva senza approvazione. Vedi [docs/ESTENSIONI.md](docs/ESTENSIONI.md).
-- **Scrive mail, sempre con il tuo OK**: prepara le mail ai contatti da scrivere e le manda solo se premi «Approva» su Telegram; ti dice quali risultano aperte. Vedi [docs/POSTA.md](docs/POSTA.md).
-- **Studia i tuoi documenti**: dagli un corso in PDF, una guida o degli appunti (da Telegram con `/impara` o dal pannello): li legge, ne ricava un riassunto e dei principi, e quando una tua domanda c'entra ritrova da solo i passaggi giusti citando la fonte e la pagina. Vedi [docs/BIBLIOTECA.md](docs/BIBLIOTECA.md).
+- **Scrive mail, sempre con il tuo OK**: prepara le mail ai contatti da scrivere e le manda solo se premi «Approva» su Telegram; ti dice quali risultano aperte (segnale facoltativo). Un server di posta comune, che ogni account può sostituire con il suo. Se per un nuovo contatto manca un dato, lo chiede e non inventa. Vedi [docs/POSTA.md](docs/POSTA.md).
+- **Studia i tuoi documenti**: dagli un corso in PDF, una guida o degli appunti (da Telegram con `/impara` o dal pannello): li legge, ne ricava un riassunto e dei principi, e quando una tua domanda c'entra ritrova da solo i passaggi giusti e li usa come cose che sa, senza citare pagine. Vedi [docs/BIBLIOTECA.md](docs/BIBLIOTECA.md).
 - **Ha un team di esperti** (strategia social, contenuti, PR, bandi, vendite…) da cui chiede un secondo parere: ruoli del progetto open source [agency-agents](https://github.com/msitarzewski/agency-agents), solo consulenza, senza strumenti. Vedi [docs/ESPERTI.md](docs/ESPERTI.md).
 - **Funziona in gruppo** (una band, due soci): ognuno abilitato, tutti vedono cosa fa il manager.
 
@@ -32,12 +32,14 @@ Il pannello web (senza JavaScript, dati finti nelle immagini) ha lo stile del vi
 | **Archivio**: note e tabelle dell'account, senza Git | **Cosa ha imparato**: lezioni da approvare come regole |
 | ![Estensione](docs/img/estensione-ricettario.jpeg) | ![Esperti](docs/img/esperti.jpeg) |
 | **Estensioni**: pagine e strumenti che il manager si costruisce | **Esperti**: consulenti da interpellare per un parere |
+| ![Posta](docs/img/posta.jpeg) | |
+| **Posta**: server SMTP con prova; ogni account può avere il suo | |
 
 ## Per quali account
 I primi usi sono **musicali** (artisti e band): il piano editoriale, la ricerca di concorsi e festival e la classificazione dei contenuti nascono da lì. Per altri ambiti la personalità, le regole e **cosa conta come pertinente** si decidono nel profilo dell'account (`identita`, `regole_extra`, `ambito`: vedi [docs/ACCOUNTS.md](docs/ACCOUNTS.md)). Nell'archivio restano alcuni nomi storici (stati come `personale_non_gestito`): non cambiano il funzionamento.
 
 ## Cosa NON fa, mai
-Non pubblica, non commenta, non scrive messaggi, non si candida, non compra e non firma niente da solo. Prepara bozze e **aspetta il tuo OK**. Instagram solo tramite API ufficiali: niente scraping, niente password, niente trucchi. Dettagli in [SECURITY.md](SECURITY.md).
+Non pubblica, non commenta, non scrive messaggi, non si candida, non compra e non firma niente da solo: nemmeno una mail parte senza il tuo «Approva». Prepara bozze (anche i testi dei messaggi privati: li mandi tu) e **aspetta il tuo OK**. Instagram solo tramite API ufficiali: niente scraping, niente password, niente trucchi. Dettagli in [SECURITY.md](SECURITY.md).
 
 ## Installazione (5 minuti)
 Servono: un server o PC sempre acceso con [Docker](https://docs.docker.com/engine/install/), e un servizio IA compatibile OpenAI (es. [OmniRoute](https://github.com/diegosouzapw/OmniRoute), o un provider con endpoint `/v1`).
