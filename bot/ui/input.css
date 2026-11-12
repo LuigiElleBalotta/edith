@@ -1,3 +1,81 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ---- Tema EDITH (visore): solo CSS, nessun JavaScript e nessuna risorsa esterna ---- */
+:root {
+  --e-void: #050b17;
+  --e-panel: rgba(12, 26, 46, 0.78);
+  --e-line: rgba(80, 200, 235, 0.28);
+  --e-cyan: #5fd8f2;
+  --e-amber: #ff9a2e;
+  --e-text: #e6f1fa;
+}
+html.dark body {
+  color: var(--e-text);
+  background-color: var(--e-void);
+  background-image:
+    radial-gradient(900px 520px at 88% -8%, rgba(255, 138, 31, 0.30), transparent 62%),
+    radial-gradient(760px 460px at -6% 108%, rgba(60, 170, 230, 0.20), transparent 60%),
+    linear-gradient(rgba(95, 216, 242, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(95, 216, 242, 0.045) 1px, transparent 1px);
+  background-size: auto, auto, 38px 38px, 38px 38px;
+  background-attachment: fixed;
+}
+html.dark header {
+  position: sticky; top: 0; z-index: 10;
+  background: rgba(5, 11, 23, 0.82);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--e-line);
+  box-shadow: 0 1px 0 rgba(255, 138, 31, 0.25), 0 8px 30px rgba(0, 0, 0, 0.35);
+}
+.e-brand { display: inline-flex; align-items: center; gap: 0.6rem; text-decoration: none; color: var(--e-text); }
+.e-brand svg { width: 2rem; height: 2rem; flex: none; filter: drop-shadow(0 0 6px rgba(255, 154, 46, 0.55)); }
+.e-brand b { font-size: 1.05rem; letter-spacing: 0.32em; font-weight: 700; text-transform: uppercase; }
+.e-brand small { display: block; font-size: 0.62rem; letter-spacing: 0.2em; color: var(--e-cyan); text-transform: uppercase; font-weight: 500; opacity: 0.85; }
+@keyframes e-spin { to { transform: rotate(360deg); } }
+@keyframes e-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+.e-ring { transform-origin: 50% 50%; animation: e-spin 14s linear infinite; }
+.e-core { animation: e-pulse 3.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .e-ring, .e-core { animation: none; } }
+
+/* pannelli: vetro scuro con bordo azzurro e angoli arancio, come i riquadri del visore */
+html.dark section {
+  position: relative;
+  background: var(--e-panel);
+  border: 1px solid var(--e-line);
+  border-radius: 0.9rem;
+  box-shadow: 0 0 0 1px rgba(5, 11, 23, 0.6), 0 10px 34px rgba(0, 0, 0, 0.38), inset 0 0 40px rgba(60, 170, 230, 0.05);
+  backdrop-filter: blur(6px);
+}
+html.dark section::before, html.dark section::after {
+  content: ""; position: absolute; width: 14px; height: 14px; pointer-events: none;
+  border: 2px solid var(--e-amber); opacity: 0.9;
+}
+html.dark section::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; border-top-left-radius: 0.9rem; }
+html.dark section::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; border-bottom-right-radius: 0.9rem; }
+html.dark section h2 { display: flex; align-items: center; gap: 0.55rem; font-size: 0.95rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--e-cyan); }
+html.dark section h2::before { content: ""; width: 7px; height: 7px; background: var(--e-amber); box-shadow: 0 0 8px var(--e-amber); flex: none; }
+html.dark main h1 { letter-spacing: 0.04em; color: #fff; text-shadow: 0 0 22px rgba(95, 216, 242, 0.35); }
+
+/* bottoni: ambra luminoso */
+html.dark button.bg-indigo-600, html.dark a.bg-indigo-600 {
+  background-image: linear-gradient(180deg, #ff9d3a, #c9540a);
+  border: 1px solid rgba(255, 190, 120, 0.55);
+  box-shadow: 0 0 18px rgba(255, 138, 31, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  letter-spacing: 0.02em;
+}
+html.dark button.bg-indigo-600:hover, html.dark a.bg-indigo-600:hover { box-shadow: 0 0 26px rgba(255, 138, 31, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3); filter: brightness(1.08); }
+html.dark input, html.dark textarea, html.dark select {
+  background-color: rgba(3, 8, 18, 0.75); border-color: rgba(95, 216, 242, 0.28); color: var(--e-text);
+}
+html.dark input:focus, html.dark textarea:focus { border-color: var(--e-amber); box-shadow: 0 0 0 2px rgba(255, 138, 31, 0.28), 0 0 18px rgba(255, 138, 31, 0.2); }
+html.dark ::placeholder { color: #5f7c9c; }
+html.dark code, html.dark pre { color: #bfeaf7; }
+html.dark ::selection { background: rgba(255, 138, 31, 0.45); color: #fff; }
+
+/* pagina di accesso */
+.e-hero { text-align: center; }
+.e-hero svg { width: 5.5rem; height: 5.5rem; filter: drop-shadow(0 0 16px rgba(255, 154, 46, 0.6)); }
+.e-hero h1 { margin-top: 0.75rem; font-size: 2.1rem; letter-spacing: 0.42em; padding-left: 0.42em; text-transform: uppercase; color: #fff; text-shadow: 0 0 26px rgba(95, 216, 242, 0.4); }
+.e-hero p.e-tag { margin-top: 0.4rem; font-size: 0.72rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--e-cyan); }

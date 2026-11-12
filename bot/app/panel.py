@@ -95,14 +95,23 @@ def flash(msg="", err=""):
     return out
 
 
+def _logo() -> str:
+    """Il «visore» di EDITH: due anelli e un nucleo, in SVG inline (nessuna immagine da caricare)."""
+    return ('<svg viewBox="0 0 64 64" aria-hidden="true"><g class="e-ring"><circle cx="32" cy="32" r="28" fill="none" stroke="#5fd8f2" stroke-opacity=".55" stroke-width="1.5" stroke-dasharray="3 5"/>'
+            '<path d="M32 4a28 28 0 0 1 24.2 14" fill="none" stroke="#ff9a2e" stroke-width="3" stroke-linecap="round"/>'
+            '<path d="M32 60a28 28 0 0 1-24.2-14" fill="none" stroke="#ff9a2e" stroke-width="3" stroke-linecap="round"/></g>'
+            '<circle cx="32" cy="32" r="18" fill="none" stroke="#5fd8f2" stroke-width="1.5"/>'
+            '<circle class="e-core" cx="32" cy="32" r="8" fill="#ff9a2e"/><circle cx="32" cy="32" r="3" fill="#fff4e0"/></svg>')
+
+
 def page(title: str, body: str, csrf: str = "", logged: bool = True) -> str:
     nav = ""
     if logged:
         nav = ('<header class="border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"><div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">'
-               '<a href="/" class="text-lg font-bold tracking-tight">EDITH</a>'
+               '<a href="/" class="e-brand">' + _logo() + '<span><b>E.D.I.T.H.</b><small>Manager social</small></span></a>'
                f'<form method="post" action="/logout"><input type="hidden" name="csrf" value="{H(csrf)}">'
                '<button class="text-sm text-slate-600 underline hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">Esci</button></form></div></header>')
-    return ('<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+    return ('<!doctype html><html lang="it" class="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#050b17">'
             f'<title>{H(title)} · EDITH</title><link rel="stylesheet" href="/static/panel.css"></head>'
             '<body class="min-h-screen bg-slate-50 text-base leading-relaxed text-slate-900 antialiased dark:bg-slate-900 dark:text-slate-100">'
             f'{nav}<main class="mx-auto max-w-3xl px-4 pb-16 pt-6">{body}</main></body></html>')
@@ -695,8 +704,9 @@ def make_handler(panel: Panel):
             e = flash(err=err)
             form = ('<form method="post" action="/login">' + field("Password", "password", "", "È la riga PANEL_PASSWORD del file .env sul server.", "password", True)
                     + f'<div class="mt-5">{btn("Entra")}</div></form>')
-            return page("Accesso", '<div class="mx-auto mt-16 max-w-sm"><h1 class="text-3xl font-bold tracking-tight">EDITH</h1>'
-                        '<p class="mt-1 text-slate-600 dark:text-slate-300">Pannello di configurazione. Entra con la password del pannello.</p>' + e + card("", "", form) + "</div>", logged=False)
+            return page("Accesso", '<div class="mx-auto mt-12 max-w-sm"><div class="e-hero">' + _logo() + '<h1 class="text-3xl font-bold">E.D.I.T.H.</h1>'
+                        '<p class="e-tag">Even Dead, I\'m The Hero</p></div>'
+                        '<p class="mt-6 text-center text-slate-600 dark:text-slate-300">Pannello di configurazione. Entra con la password del pannello.</p>' + e + card("", "", form) + "</div>", logged=False)
 
         # --- richieste ---
         def do_GET(self):
