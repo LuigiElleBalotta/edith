@@ -22,7 +22,7 @@ cd edith
 ```
 `setup.sh` crea le cartelle, chiede indirizzo e chiave del servizio IA, genera la **password del pannello** (te la mostra una volta; sta anche in `.env`), avvia il contenitore e ti guida a creare il primo account.
 
-Il contenitore usa l'immagine `ghcr.io/luigielleballotta/edith:latest`. Se vuoi costruirla tu: `docker compose build`.
+Il contenitore usa l'immagine `ghcr.io/luigiellebalotta/edith:latest`. Se vuoi costruirla tu: `docker compose build`.
 
 ## 2. Il servizio IA
 EDITH parla con un servizio **compatibile OpenAI**: serve l'indirizzo (finisce con `/v1`) e una chiave.

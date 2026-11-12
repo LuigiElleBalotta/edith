@@ -3,7 +3,7 @@
 # Avvio: ./setup.sh   |   Uso quotidiano: ./manager
 services:
   manager:
-    image: ${MANAGER_IMAGE:-ghcr.io/luigielleballotta/edith:latest}
+    image: ${MANAGER_IMAGE:-ghcr.io/luigiellebalotta/edith:latest}
     build: ./bot
     container_name: edith
     restart: unless-stopped
