@@ -7,6 +7,6 @@ case "${1:-help}" in
   logs)    docker compose logs -f --tail=100 manager ;;
   status)  docker compose ps; docker stats --no-stream edith ;;
   restart) docker compose restart manager ;;
-  update)  git pull --ff-only && (docker compose pull --quiet 2>/dev/null || docker compose build) && docker compose up -d ;;
+  update)  git pull --ff-only && mkdir -p estensioni && (docker compose pull --quiet 2>/dev/null || docker compose build) && docker compose up -d ;;  # estensioni: la crea l'utente (non root) prima che lo faccia Docker
   *) sed -n '2p' "$0" ;;
 esac
