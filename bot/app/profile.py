@@ -111,3 +111,24 @@ def set_expert(data_dir, eid: str, on: bool) -> list:
         f.write(chr(10))
     os.replace(tmp, path)
     return data["esperti_spenti"]
+
+
+def set_kb(data_dir, kb: dict) -> dict:
+    """Imposta SOLO la voce «kb» di profile.json ({"tipo": "interno"} oppure {"repo": ..., "branch": ..., "write_branch": ...})."""
+    import tempfile
+    path = os.path.join(data_dir, "profile.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            data = {}
+    except (OSError, ValueError):
+        data = {}
+    data["kb"] = {str(k): str(v) for k, v in kb.items()}
+    os.makedirs(data_dir, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=data_dir, prefix=".profile-")
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+        f.write(chr(10))
+    os.replace(tmp, path)
+    return data["kb"]

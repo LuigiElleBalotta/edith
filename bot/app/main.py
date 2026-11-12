@@ -546,16 +546,19 @@ def run_account(cfg, stop=None) -> int:
     from .kb import KbError, KnowledgeBase
     profilo = prof.load(db.profile_dir)
     kbc = profilo.get("kb") or {}
-    kb = KnowledgeBase(os.path.join(cfg.data_dir, "kb"), repo=kbc.get("repo") or cfg.kb_repo,
+    interno = kbc.get("tipo") == "interno" and not (kbc.get("repo") or cfg.kb_repo)
+    kb = KnowledgeBase(os.path.join(cfg.data_dir, "archivio" if interno else "kb"), repo=kbc.get("repo") or cfg.kb_repo,
                        key=cfg.kb_key, read_branch=kbc.get("branch") or "main",
                        write_branch=kbc.get("write_branch") or "manager",
-                       author=profilo.get("nome_account") or "Manager (bot)")
+                       author=profilo.get("nome_account") or "Manager (bot)", local=interno)
     db.set("kb:attivo", "1" if kb.configured else "0")
 
     def _salva_modifica_kb(db_, a):  # eseguita solo DOPO l'approvazione dei bottoni
         ex = a.get("extra") or {}
         esito = kb.apply(ex["percorso"], ex["contenuto"], f"{ex.get('motivo') or 'Aggiornamento'} (approvato dal proprietario)")
         db_.audit("manager", "kb_modifica_salvata", f"{ex['percorso']} -> {esito}")
+        if kb.local:
+            return "Salvato nell'archivio: lo trovi anche nel pannello, alla voce «Archivio»."
         return f"Salvato nell'archivio ({esito}). " + ("Il sito si aggiorna da solo." if kb.write_branch == kb.read_branch else
                                                        f"È sul ramo «{kb.write_branch}»: va unito a main per renderlo ufficiale.")
     db.hooks["modifica_kb"] = _salva_modifica_kb

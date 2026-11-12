@@ -1,6 +1,7 @@
 # Cronologia
 
 ## 0.6 — Biblioteca
+- **Archivio per tutti, dal sito.** Ogni account può avere un archivio di note e tabelle senza Git: pagina **Archivio** del pannello (crea l'archivio interno, scrivi e modifica le note; la versione precedente resta in `.versioni/`). Chi ha già un repository Git può collegarlo dal sito (indirizzi SSH validati, chiave di sola scrittura sul repository generata dal pannello e mai mostrata). Il manager usa gli stessi strumenti `kb_*` in entrambi i casi e le sue modifiche passano sempre dall'approvazione.
 - Il manager parla di ciò che ha studiato come di cose che sa, senza citare pagine. Lo studio riprova una volta se l'IA dà una risposta vuota e non fallisce per un solo blocco. Il pannello chiude con una risposta chiara anche i rifiuti prima della lettura (cadeva a intermittenza la connessione).
 - **Biblioteca**: il manager studia i documenti che gli dai (PDF, Word, PowerPoint, testo, Markdown, pagine web) da Telegram (`/impara`) o dal pannello. Il testo viene diviso in pezzi con titolo e pagina e indicizzato (SQLite FTS5); a ogni messaggio il sistema cerca da solo i pezzi pertinenti e li mette nel contesto, con l'avviso che sono nozioni di terzi; il manager cita fonte e pagina.
 - **Studio in background**: riassunto e principi operativi, che diventano lezioni (le regole solo con il tuo OK).

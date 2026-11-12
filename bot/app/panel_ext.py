@@ -364,6 +364,126 @@ def experts_page(panel, s, cfg, db, msg="", err=""):
     return page("Esperti", corpo, s["csrf"])
 
 
+# ------------------------------------------------------------------ archivio di conoscenza
+def _archivio(panel, cfg):
+    """(KnowledgeBase, modo) dell'account. modo: 'interno' (cartella sul server), 'git' (repository) o 'nessuno'."""
+    from .kb import KnowledgeBase
+    kbp = panel._profile(cfg).get("kb") or {}
+    repo = kbp.get("repo") or cfg.kb_repo
+    if repo:
+        return KnowledgeBase(os.path.join(cfg.data_dir, "kb"), repo=repo, key=cfg.kb_key), "git"
+    if kbp.get("tipo") == "interno":
+        return KnowledgeBase(os.path.join(cfg.data_dir, "archivio"), local=True), "interno"
+    return None, "nessuno"
+
+
+def archive_page(panel, s, cfg, msg="", err="", extra=""):
+    base = f"/account/{H(cfg.slug)}"
+    csrf = _csrf(s)
+    kb, modo = _archivio(panel, cfg)
+    intro = (f'<a href="{base}" class="{BACK}">← Torna a {H(cfg.slug)}</a><h1 class="mt-2 text-2xl font-bold">Archivio</h1>'
+             '<p class="mt-2 text-slate-600 dark:text-slate-300">L\'archivio è la raccolta di <b>note e tabelle</b> di questo account: il calendario, le regole, i contatti, le idee. '
+             'Il manager le legge quando serve e ti <b>propone</b> le modifiche: si salvano solo se le approvi. '
+             'Non è la stessa cosa della <a class="underline" href="' + base + '/biblioteca">Biblioteca</a> (documenti da cui il manager impara).</p>' + flash(msg, err) + extra)
+    if modo == "nessuno":
+        interno = (f'<form method="post" action="{base}/archivio/attiva">{csrf}<p class="{HELP}">Una cartella di note sul tuo server, che scrivi e modifichi da qui. '
+                   f'Non serve Git e non serve nessun account esterno. È la scelta più semplice.</p><div class="mt-3">{btn("Crea l\'archivio interno")}</div></form>')
+        git = (f'<form method="post" action="{base}/archivio/git">{csrf}<p class="{HELP}">Per chi ha già un repository (per esempio su GitHub). Il manager lo legge e scrive su un ramo suo, mai su quello principale. '
+               f'Ti darò una chiave da aggiungere al repository come «Deploy key» con permesso di scrittura.</p>'
+               f'<input class="{INPUT} mt-2" name="repo" placeholder="git@github.com:utente/archivio.git" required>'
+               f'<p class="{HELP}">Solo indirizzi SSH, nel formato <i>git@sito:utente/nome.git</i>.</p><div class="mt-3">{btn("Collega il repository")}</div></form>')
+        return page("Archivio", intro + card("Archivio interno (consigliato)", "", interno) + card("Collega un repository Git", "", git), s["csrf"])
+    righe = ""
+    for f in (kb.files() if kb.root.is_dir() else []):
+        azione = (f'<a class="text-sm text-indigo-600 hover:underline dark:text-indigo-400" href="{base}/archivio/modifica?p={urllib.parse.quote(f["percorso"])}">Apri e modifica</a>'
+                  if modo == "interno" else "")
+        righe += (f'<li class="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-2 dark:border-slate-700">'
+                  f'<span><code>{H(f["percorso"])}</code> <span class="{HELP}">{f["byte"]} byte</span></span>{azione}</li>')
+    vuoto = '<p class="mt-3 text-slate-600 dark:text-slate-300">Ancora nessun file.</p>'
+    if modo == "interno":
+        nuova = (f'<form method="post" action="{base}/archivio/nota">{csrf}<p class="{HELP}">Un file di testo: note, calendario, una tabella CSV… Puoi anche chiedere al manager di scriverlo (ti chiederà il permesso).</p>'
+                 f'<input class="{INPUT} mt-2" name="percorso" placeholder="note/idee.md" required>'
+                 f'<p class="{HELP}">Il nome può avere cartelle (note/idee.md). Se non scrivi l\'estensione, aggiungo .md.</p>'
+                 f'<textarea class="{INPUT} mt-2" name="testo" rows="8"></textarea><div class="mt-3">{btn("Salva la nota")}</div></form>')
+        corpo = (card("Archivio interno", "", f'<p class="{HELP}">Cartella sul tuo server, solo testo. Quando modifichi un file, la versione di prima resta salvata.</p>'
+                      + (f'<ul class="list-none">{righe}</ul>' if righe else vuoto)) + card("Nuova nota", "", nuova))
+    else:
+        corpo = card("Archivio su Git", "", f'<p class="{HELP}">Collegato al repository <code>{H(kb.repo)}</code>. Si modifica da Git (o chiedendo al manager, che propone e tu approvi): '
+                     f'qui puoi solo vedere i file letti l\'ultima volta.</p>' + (f'<ul class="list-none">{righe}</ul>' if righe else
+                     '<p class="mt-3 text-slate-600 dark:text-slate-300">Il manager non ha ancora letto il repository: succede alla prima domanda che lo riguarda.</p>'))
+    return page("Archivio", intro + corpo, s["csrf"])
+
+
+def archive_edit_page(panel, s, cfg, rel, err=""):
+    base = f"/account/{H(cfg.slug)}"
+    kb, modo = _archivio(panel, cfg)
+    if modo != "interno":
+        return 404, page("Non trovato", "<h1>Pagina non trovata</h1>", s["csrf"])
+    from .kb import KbError
+    try:
+        testo = kb.read(rel)
+    except KbError as e:
+        return 200, archive_page(panel, s, cfg, err=str(e))
+    form = (f'<form method="post" action="{base}/archivio/nota">{_csrf(s)}<input type="hidden" name="percorso" value="{H(rel)}">'
+            f'<textarea class="{INPUT}" name="testo" rows="22">{H(testo)}</textarea>'
+            f'<div class="mt-3 flex gap-3">{btn("Salva")}{link("Annulla", base + "/archivio", "ghost")}</div></form>')
+    return 200, page("Modifica", f'<a href="{base}/archivio" class="{BACK}">← Archivio</a>' + flash(err=err) + card(H(rel), "", form), s["csrf"])
+
+
+def _archive_action(panel, s, cfg, db, act, form):
+    from .kb import KbError, valid_repo
+    kb, modo = _archivio(panel, cfg)
+    try:
+        if act == "attiva":
+            if modo != "nessuno":
+                return 200, archive_page(panel, s, cfg, err="Questo account ha già un archivio.")
+            prof.set_kb(cfg.profile_dir or cfg.data_dir, {"tipo": "interno"})
+            db.audit("proprietario", "archivio_attivato", "interno")
+            panel.control and panel.control.restart(cfg.slug)
+            return 200, archive_page(panel, s, cfg, msg="Archivio creato. L'account si riavvia (fino a 30 secondi): poi il manager lo usa. Intanto puoi già scrivere le prime note.")
+        if act == "git":
+            if modo != "nessuno":
+                return 200, archive_page(panel, s, cfg, err="Questo account ha già un archivio.")
+            repo = (form.get("repo") or "").strip()
+            if not valid_repo(repo):
+                return 200, archive_page(panel, s, cfg, err="L'indirizzo non va bene: serve un indirizzo SSH, per esempio git@github.com:utente/archivio.git.")
+            from . import accounts
+            d = cfg.profile_dir or cfg.data_dir
+            keyp = os.path.join(d, "kbkey")
+            if os.path.exists(keyp):
+                pub = accounts.public_from_key(keyp)
+            else:
+                tmp = os.path.join(d, ".kbkey-nuova")
+                for x in (tmp, tmp + ".pub"):
+                    if os.path.exists(x):
+                        os.remove(x)
+                pub = accounts.make_deploy_key(tmp)
+                os.replace(tmp, keyp)
+                os.chmod(keyp, 0o600)
+            prof.set_kb(d, {"repo": repo, "branch": "main", "write_branch": "manager"})
+            db.audit("proprietario", "archivio_git_collegato", "repository")
+            panel.control and panel.control.restart(cfg.slug)
+            chiave = card("Ultimo passo: la chiave", "Nelle impostazioni del repository aggiungi questa chiave pubblica come «Deploy key», con il permesso di scrittura:",
+                          f'<pre class="mt-3 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-slate-100 p-3 text-xs dark:bg-slate-900">{H(pub)}</pre>')
+            return 200, archive_page(panel, s, cfg, msg="Repository collegato. L'account si riavvia (fino a 30 secondi).", extra=chiave)
+        if act == "nota":
+            if modo != "interno":
+                return 404, page("Non trovato", "<h1>Pagina non trovata</h1>", s["csrf"])
+            rel = (form.get("percorso") or "").strip().lstrip("/")
+            if not rel or len(rel) > 200:
+                raise KbError("scrivi il nome del file")
+            if not os.path.splitext(rel)[1]:
+                rel += ".md"
+            kb.write_local(rel, form.get("testo", ""))
+            db.audit("proprietario", "archivio_nota", rel)
+            return 200, archive_page(panel, s, cfg, msg=f"Salvato «{rel}».")
+    except KbError as e:
+        return 200, archive_page(panel, s, cfg, err=f"Non posso salvarlo: {e}.")
+    except (OSError, ValueError) as e:
+        return 200, archive_page(panel, s, cfg, err=f"Non riesco a scrivere i file ({type(e).__name__}).")
+    return 404, page("Non trovato", "<h1>Pagina non trovata</h1>", s["csrf"])
+
+
 # ------------------------------------------------------------------ instradamento
 def _runtime(panel, cfg, db):
     ai = panel.ext_ask
@@ -393,6 +513,10 @@ def get(panel, s, cfg, parts, query):
                 return 200, experts_page(panel, s, cfg, db)
             if parts == ["biblioteca"]:
                 return 200, library_page(panel, s, cfg, db)
+            if parts == ["archivio"]:
+                return 200, archive_page(panel, s, cfg)
+            if parts == ["archivio", "modifica"]:
+                return archive_edit_page(panel, s, cfg, (query.get("p") or [""])[0])
         except ext.ExtError as e:
             return 200, page("Errore", flash(err=str(e)), s["csrf"])
     return 404, page("Non trovato", "<h1>Pagina non trovata</h1>", s["csrf"])
@@ -415,6 +539,8 @@ def post(panel, s, cfg, parts, form, files=None):
                 db.lesson_set(int(parts[1]), "mai_piu" if parts[2] == "scarta" else "nuova")
                 db.audit("proprietario", "lezione_" + parts[2], f"#{parts[1]}")
                 return 200, lessons_page(panel, s, cfg, db, msg="Fatto.")
+            if len(parts) == 2 and parts[0] == "archivio":
+                return _archive_action(panel, s, cfg, db, parts[1], form)
             if parts and parts[0] == "biblioteca":
                 return _lib_action(panel, s, cfg, db, parts, form, files or {})
             if len(parts) == 3 and parts[0] == "esperti" and parts[2] in ("accendi", "spegni"):

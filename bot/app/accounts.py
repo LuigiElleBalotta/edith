@@ -121,6 +121,12 @@ def make_deploy_key(path: str) -> str:
     return pub
 
 
+def public_from_key(path: str) -> str:
+    """Parte pubblica di una chiave privata già esistente."""
+    out = subprocess.run(["ssh-keygen", "-y", "-f", path], check=True, capture_output=True, text=True)
+    return out.stdout.strip()
+
+
 # ---------- procedura guidata ----------
 
 class IO:

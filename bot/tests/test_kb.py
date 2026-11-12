@@ -14,6 +14,50 @@ from app.kb import KbError, KnowledgeBase
 from app.tools import Tools
 
 
+class ArchivioInternoTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.kb = KnowledgeBase(os.path.join(self.tmp.name, "archivio"), local=True)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_configurato_senza_git_e_sync_vede_i_cambiamenti(self):
+        self.assertTrue(self.kb.configured)
+        r0 = self.kb.sync()
+        self.assertEqual(r0["file_cambiati"], [])
+        self.kb.write_local("note/a.md", "uno")
+        r1 = self.kb.sync()
+        self.assertEqual(r1["file_cambiati"], ["note/a.md"])
+        self.assertNotEqual(r1["commit"], r0["commit"])
+        self.assertEqual(self.kb.sync()["file_cambiati"], [])  # niente di nuovo dopo
+        self.assertEqual(self.kb.head(), self.kb.sync()["commit"])
+
+    def test_scrittura_con_versioni_e_percorsi_vietati(self):
+        self.kb.write_local("a.md", "uno")
+        self.kb.write_local("a.md", "due")
+        self.assertEqual(self.kb.read("a.md"), "due")
+        ver = os.listdir(os.path.join(self.kb.root, ".versioni"))
+        self.assertEqual(len(ver), 1)
+        self.assertEqual(open(os.path.join(self.kb.root, ".versioni", ver[0]), encoding="utf-8").read(), "uno")
+        for brutto in ("../x.md", "secrets/k.md", ".versioni/a.md", ".stato/s.md", "a.exe"):
+            with self.assertRaises(KbError):
+                self.kb.write_local(brutto, "x")
+        self.assertEqual([f["percorso"] for f in self.kb.files()], ["a.md"])  # .versioni e .stato non si vedono
+        self.assertEqual(self.kb.search("uno"), [])  # nemmeno nella ricerca
+
+    def test_apply_dopo_approvazione_scrive_in_locale(self):
+        self.assertEqual(self.kb.apply("b.md", "ciao", "motivo"), "archivio interno")
+        self.assertEqual(self.kb.read("b.md"), "ciao")
+
+    def test_indirizzi_repository_validi(self):
+        from app.kb import valid_repo
+        self.assertTrue(valid_repo("git@github.com:utente/archivio.git"))
+        self.assertTrue(valid_repo("ssh://git@host.it:2222/utente/r.git"))
+        for brutto in ("", "-oProxyCommand=x", "--upload-pack=x", "https://x/y.git", "/tmp/r", "git@x:y.git x", "git@x:../y", "file:///x"):
+            self.assertFalse(valid_repo(brutto), brutto)
+
+
 class Cfg:
     model_normal, model_reason, model_light = "N", "R", "L"
     history_messages = 10

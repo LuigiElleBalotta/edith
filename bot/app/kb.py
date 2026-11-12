@@ -8,8 +8,12 @@ Regole di sicurezza (valgono per ogni account):
 - il codice che fa girare l'automazione (`ops/gateway`, `ops/bridge`) non è modificabile da qui.
 """
 import difflib
+import hashlib
+import json
 import os
+import re
 import subprocess
+import time
 from pathlib import Path
 
 
@@ -17,8 +21,17 @@ class KbError(Exception):
     pass
 
 
+REPO_RE = re.compile(r"^(git@[A-Za-z0-9][A-Za-z0-9.-]*:[A-Za-z0-9._/-]+|ssh://git@[A-Za-z0-9][A-Za-z0-9.-]*(:[0-9]{1,5})?/[A-Za-z0-9._/-]+)$")
+
+
+def valid_repo(url: str) -> bool:
+    """Solo indirizzi SSH di un repository: mai opzioni (-...), mai file locali, mai http."""
+    url = (url or "").strip()
+    return bool(REPO_RE.match(url)) and not url.startswith("-") and ".." not in url
+
+
 class KnowledgeBase:
-    DENY_TOP = {".git", ".github", "secrets", "inbox", "node_modules", "__pycache__"}
+    DENY_TOP = {".git", ".github", "secrets", "inbox", "node_modules", "__pycache__", ".versioni", ".stato"}
     DENY_PREFIX = ("data/raw", "data/private", "ops/gateway", "ops/bridge")
     DENY_NAMES = (".env", "id_rsa", "id_ed25519", "write_key", "known_hosts", "credentials")
     READ_EXT = {".md", ".txt", ".csv", ".json", ".yml", ".yaml", ".ics", ".py", ".js", ".css", ".html", ".toml", ".sql", ".tsv"}
@@ -26,8 +39,9 @@ class KnowledgeBase:
     MAX_FILE_WRITE = 400_000
 
     def __init__(self, root: str, repo: str = "", key: str = "", read_branch: str = "main", write_branch: str = "manager",
-                 author: str = "Manager (bot)", runner=None):
+                 author: str = "Manager (bot)", runner=None, local: bool = False):
         self.root = Path(root)
+        self.local = bool(local) and not repo  # archivio interno: una cartella sul server, senza Git
         self.repo, self.key = repo, key
         self.read_branch, self.write_branch, self.author = read_branch, write_branch, author
         self._run = runner or subprocess.run
@@ -54,19 +68,86 @@ class KnowledgeBase:
 
     @property
     def configured(self) -> bool:
-        return bool(self.repo)
+        return bool(self.repo) or self.local
+
+    def _snapshot(self) -> dict:
+        out = {}
+        if self.root.is_dir():
+            for f in sorted(self.root.rglob("*")):
+                if f.is_file():
+                    rel = f.relative_to(self.root).as_posix()
+                    if self._allowed(rel, False):
+                        st = f.stat()
+                        out[rel] = f"{st.st_size}:{st.st_mtime_ns}"
+        return out
+
+    def _sync_local(self) -> dict:
+        self.root.mkdir(parents=True, exist_ok=True)
+        snap = self._snapshot()
+        sf = self.root / ".stato" / "snap.json"
+        try:
+            prev = json.loads(sf.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            prev = {}
+        if not isinstance(prev, dict):
+            prev = {}
+        sig = lambda d: hashlib.sha1(json.dumps(sorted(d.items())).encode()).hexdigest()[:7]
+        cambiati = sorted(f for f in snap if prev.get(f) != snap[f] and f.lower().endswith(tuple(self.READ_EXT)))
+        sf.parent.mkdir(parents=True, exist_ok=True)
+        sf.write_text(json.dumps(snap), encoding="utf-8")
+        ultimo = max((self.root / f).stat().st_mtime for f in snap) if snap else time.time()
+        return {"commit": sig(snap), "precedente": sig(prev) if prev else "", "file_cambiati": cambiati,
+                "data": time.strftime("%d/%m/%Y %H:%M", time.localtime(ultimo))}
+
+    def write_local(self, rel: str, text: str) -> str:
+        """Scrive un file nell'archivio interno (usato dal proprietario dal pannello e, dopo l'approvazione, dal manager).
+        Se esisteva, la versione precedente resta in .versioni/."""
+        if not self.local:
+            raise KbError("questo archivio è su Git: si modifica da lì")
+        p = self._path(rel, write=True)
+        if p.suffix.lower() not in self.READ_EXT:
+            raise KbError("si possono salvare solo file di testo (.md, .txt, .csv…)")
+        if len(text) > self.MAX_FILE_WRITE:
+            raise KbError("file troppo grande")
+        if p.is_dir():
+            raise KbError("questo nome è una cartella")
+        p.parent.mkdir(parents=True, exist_ok=True)
+        if p.is_file():
+            ver = self.root / ".versioni"
+            ver.mkdir(parents=True, exist_ok=True)
+            nome = p.relative_to(self.root).as_posix().replace("/", "__")
+            (ver / f"{nome}.{time.strftime('%Y%m%d-%H%M%S')}").write_bytes(p.read_bytes())
+        p.write_text(text, encoding="utf-8", newline="")
+        return "archivio interno"
+
+    def files(self, limit: int = 300) -> list:
+        """Elenco piatto dei file leggibili (percorso, byte)."""
+        out = []
+        if self.root.is_dir():
+            for f in sorted(self.root.rglob("*")):
+                if len(out) >= limit:
+                    break
+                if f.is_file() and f.suffix.lower() in self.READ_EXT:
+                    rel = f.relative_to(self.root).as_posix()
+                    if self._allowed(rel, False):
+                        out.append({"percorso": rel, "byte": f.stat().st_size})
+        return out
 
     def head(self) -> str:
+        if self.local:
+            return self._sync_local()["commit"]
         return self._git("rev-parse", "--short", "HEAD") if (self.root / ".git").exists() else ""
 
     def sync(self) -> dict:
         """Porta la copia locale all'ultimo stato del ramo principale. Ritorna {commit, precedente, file_cambiati, data}."""
         if not self.configured:
             raise KbError("archivio non configurato per questo account")
+        if self.local:
+            return self._sync_local()
         before = ""
         if not (self.root / ".git").exists():
             self.root.parent.mkdir(parents=True, exist_ok=True)
-            self._git("clone", "--quiet", "--branch", self.read_branch, self.repo, str(self.root), cwd=self.root.parent)
+            self._git("clone", "--quiet", "--branch", self.read_branch, "--", self.repo, str(self.root), cwd=self.root.parent)
         else:
             before = self._git("rev-parse", "HEAD")
             self._git("fetch", "--quiet", "origin")
@@ -176,6 +257,8 @@ class KnowledgeBase:
         """Scrive il file e lo pubblica sul ramo di scrittura. Ritorna 'ramo@commit'."""
         if not self.configured:
             raise KbError("archivio non configurato")
+        if self.local:
+            return self.write_local(rel, new_text)
         self._path(rel, write=True)
         self.sync()  # parto sempre dall'ultimo stato
         wb = self.write_branch

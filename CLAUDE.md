@@ -28,7 +28,7 @@ bot/app/
   approvals.py       il manager propone, il proprietario decide con un tocco
   guard.py           blocco: non tocca mai contenuti personali o non classificati
   instagram.py, import_account.py, audit_instagram.py, analytics.py   Graph API in sola lettura
-  kb.py              archivio di conoscenza (repository Git dell'account)
+  kb.py              archivio di conoscenza: cartella interna sul server (modo `interno`, senza Git) oppure repository Git; stessi strumenti `kb_*`
   profile.py         personalità e regole dell'account (profile.json)
   panel.py           pannello web (solo libreria standard, nessun JavaScript)
   panel_ext.py       pagine del pannello per estensioni, approvazioni, lezioni, catalogo (il pannello disegna dal manifest)

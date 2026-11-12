@@ -272,7 +272,8 @@ class Panel:
 
     # ----- pagine -----
     def _kb(self, cfg) -> bool:
-        return bool(cfg.kb_repo or (self._profile(cfg).get("kb") or {}).get("repo"))
+        kbp = self._profile(cfg).get("kb") or {}
+        return bool(cfg.kb_repo or kbp.get("repo") or kbp.get("tipo") == "interno")
 
     def _profile(self, cfg) -> dict:
         try:
@@ -365,7 +366,7 @@ class Panel:
         cls = "rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1 font-medium text-indigo-800 hover:bg-indigo-100 dark:border-indigo-700 dark:bg-indigo-950 dark:text-indigo-200"
         badge = f' <span class="rounded-full bg-red-600 px-2 text-xs text-white">{n}</span>' if n else ""
         return (f'<nav class="mt-3 flex flex-wrap gap-2 text-sm"><a class="{cls}" href="{a}/estensioni">Estensioni{badge}</a>'
-                f'<a class="{cls}" href="{a}/lezioni">Cosa ha imparato</a><a class="{cls}" href="{a}/biblioteca">Biblioteca</a><a class="{cls}" href="{a}/esperti">Esperti</a><a class="{cls}" href="{a}/catalogo">Catalogo</a></nav>')
+                f'<a class="{cls}" href="{a}/lezioni">Cosa ha imparato</a><a class="{cls}" href="{a}/archivio">Archivio</a><a class="{cls}" href="{a}/biblioteca">Biblioteca</a><a class="{cls}" href="{a}/esperti">Esperti</a><a class="{cls}" href="{a}/catalogo">Catalogo</a></nav>')
 
     def check_page(self, s, cfg) -> str:
         res = ""
@@ -717,7 +718,7 @@ def make_handler(panel: Panel):
             if path == "/system":
                 return self._send(200, panel.system_page(s))
             parts = path.strip("/").split("/")
-            if len(parts) >= 3 and parts[0] == "account" and parts[2] in ("estensioni", "lezioni", "catalogo", "esperti", "biblioteca"):
+            if len(parts) >= 3 and parts[0] == "account" and parts[2] in ("estensioni", "lezioni", "catalogo", "esperti", "biblioteca", "archivio"):
                 from . import panel_ext
                 cfg = panel.account(parts[1])
                 if not cfg:
@@ -786,7 +787,7 @@ def make_handler(panel: Panel):
                 ok = bool(panel.control and panel.control.restart_all())
                 return self._send(200, panel.system_page(s, "Riavvio richiesto per tutti gli account: ci vogliono fino a 30 secondi." if ok else "", "" if ok else "Non posso riavviare da qui."))
             parts = path.strip("/").split("/")
-            if len(parts) >= 4 and parts[0] == "account" and parts[2] in ("estensioni", "approvazione", "lezioni", "catalogo", "esperti", "biblioteca"):
+            if len(parts) >= 4 and parts[0] == "account" and parts[2] in ("estensioni", "approvazione", "lezioni", "catalogo", "esperti", "biblioteca", "archivio"):
                 from . import panel_ext
                 cfg = panel.account(parts[1])
                 if not cfg:

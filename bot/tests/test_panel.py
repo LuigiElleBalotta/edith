@@ -384,6 +384,68 @@ class PanelTests(unittest.TestCase):
         finally:
             panel.MAX_UPLOAD = vecchio
 
+    # ---- archivio (uguale per tutti gli account) ----
+    def senza_archivio(self, nome="beta"):
+        accounts.write_account(self.acc, nome, {"TELEGRAM_BOT_TOKEN": TOKEN, "ALLOWED_TELEGRAM_USER_ID": "4242424242"},
+                               {"proprietario": "Luca", "utenti": {"4242424242": "Luca"}})
+
+    def test_archivio_interno_da_sito_per_account_senza_archivio(self):
+        self.senza_archivio()
+        self.assertEqual(self.c.login(), 303)
+        st, body, _ = self.c.req("GET", "/account/beta/archivio")
+        self.assertIn("Crea l&#x27;archivio interno", body)
+        self.assertIn("Archivio</a>", self.c.req("GET", "/account/beta")[1])  # voce nel menu dell'account
+        self.assertEqual(self.c.req("POST", "/account/beta/archivio/attiva", {})[0], 403)  # senza codice anti-CSRF
+        self.assertIn("Archivio creato", self.c.post("/account/beta/archivio/attiva", {})[1])
+        self.assertEqual(json.load(open(os.path.join(self.acc, "beta", "profile.json"), encoding="utf-8"))["kb"], {"tipo": "interno"})
+        self.assertIn("già un archivio", self.c.post("/account/beta/archivio/attiva", {})[1])
+        # nota nuova, poi modifica: la versione di prima resta in .versioni
+        self.assertIn("Salvato «note/idee.md»", self.c.post("/account/beta/archivio/nota", {"percorso": "note/idee", "testo": "uno <b>x</b>"})[1])
+        self.c.post("/account/beta/archivio/nota", {"percorso": "note/idee.md", "testo": "due"})
+        self.assertIn("note/idee.md", self.c.req("GET", "/account/beta/archivio")[1])
+        ed = self.c.req("GET", "/account/beta/archivio/modifica?p=note/idee.md")[1]
+        self.assertIn("due", ed)
+        radice = os.path.join(self.data, "beta", "archivio")
+        self.assertEqual(open(os.path.join(radice, "note", "idee.md"), encoding="utf-8").read(), "due")
+        self.assertEqual(len(os.listdir(os.path.join(radice, ".versioni"))), 1)
+        self.assertNotIn(".versioni", self.c.req("GET", "/account/beta/archivio")[1].replace("Quando modifichi un file, la versione di prima resta salvata", ""))
+        self.assertEqual(self.c.req("GET", "/account/alfa/archivio")[0], 404)  # account inesistente
+
+    def test_archivio_percorsi_vietati_e_testo_escapato(self):
+        self.senza_archivio()
+        self.assertEqual(self.c.login(), 303)
+        self.c.post("/account/beta/archivio/attiva", {})
+        radice = os.path.join(self.data, "beta", "archivio")
+        for brutto in ("../fuori.md", "secrets/chiave.md", ".versioni/x.md", ".git/config.md", "a/../../b.md", "x.exe"):
+            self.assertIn("Non posso salvarlo", self.c.post("/account/beta/archivio/nota", {"percorso": brutto, "testo": "x"})[1], brutto)
+        self.assertFalse(os.path.exists(os.path.join(self.data, "beta", "fuori.md")))
+        self.c.post("/account/beta/archivio/nota", {"percorso": "/etc/passwd.md", "testo": "x"})  # la barra iniziale si toglie: resta DENTRO l'archivio
+        self.assertTrue(os.path.exists(os.path.join(radice, "etc", "passwd.md")))
+        self.c.post("/account/beta/archivio/nota", {"percorso": "a.md", "testo": "<script>alert(1)</script>"})
+        pagina = self.c.req("GET", "/account/beta/archivio/modifica?p=a.md")[1]
+        self.assertNotIn("<script>alert(1)</script>", pagina)
+        self.assertIn("&lt;script&gt;", pagina)
+        self.assertIn("non consentito", self.c.req("GET", "/account/beta/archivio/modifica?p=../x.md")[1])
+
+    def test_archivio_git_dal_sito_accetta_solo_indirizzi_ssh(self):
+        self.senza_archivio()
+        self.assertEqual(self.c.login(), 303)
+        for brutto in ("--upload-pack=touch /tmp/x", "https://x.it/r.git", "/etc/passwd", "git@x:y.git; rm -rf /", "file:///tmp/r"):
+            self.assertIn("non va bene", self.c.post("/account/beta/archivio/git", {"repo": brutto})[1], brutto)
+        self.assertNotIn("kb", json.load(open(os.path.join(self.acc, "beta", "profile.json"), encoding="utf-8")))
+        from app import accounts as acc_mod
+        vecchio = acc_mod.make_deploy_key
+        acc_mod.make_deploy_key = lambda path: (open(path, "w").write("CHIAVE-PRIVATA-DI-PROVA"), "ssh-ed25519 AAAAPUBBLICA manager-bot")[1]
+        try:
+            body = self.c.post("/account/beta/archivio/git", {"repo": "git@github.com:utente/archivio.git"})[1]
+        finally:
+            acc_mod.make_deploy_key = vecchio
+        self.assertIn("ssh-ed25519 AAAAPUBBLICA", body)
+        self.assertNotIn("CHIAVE-PRIVATA-DI-PROVA", body)  # la chiave privata non si mostra mai
+        self.assertEqual(json.load(open(os.path.join(self.acc, "beta", "profile.json"), encoding="utf-8"))["kb"]["repo"], "git@github.com:utente/archivio.git")
+        self.assertTrue(os.path.exists(os.path.join(self.acc, "beta", "kbkey")))
+        self.assertIn("già un archivio", self.c.post("/account/beta/archivio/attiva", {})[1])
+
     def test_biblioteca_elimina_ristudia_e_isolamento(self):
         self.make_account("alfa")
         self.make_account("beta")
