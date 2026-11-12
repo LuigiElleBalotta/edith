@@ -15,8 +15,8 @@ html.dark body {
   color: var(--e-text);
   background-color: var(--e-void);
   background-image:
-    radial-gradient(900px 520px at 88% -8%, rgba(255, 138, 31, 0.30), transparent 62%),
-    radial-gradient(760px 460px at -6% 108%, rgba(60, 170, 230, 0.20), transparent 60%),
+    radial-gradient(1100px 640px at 90% -10%, rgba(255, 138, 31, 0.46), transparent 64%),
+    radial-gradient(900px 560px at -8% 110%, rgba(60, 170, 230, 0.28), transparent 62%),
     linear-gradient(rgba(95, 216, 242, 0.045) 1px, transparent 1px),
     linear-gradient(90deg, rgba(95, 216, 242, 0.045) 1px, transparent 1px);
   background-size: auto, auto, 38px 38px, 38px 38px;
@@ -76,6 +76,6 @@ html.dark ::selection { background: rgba(255, 138, 31, 0.45); color: #fff; }
 
 /* pagina di accesso */
 .e-hero { text-align: center; }
-.e-hero svg { width: 5.5rem; height: 5.5rem; filter: drop-shadow(0 0 16px rgba(255, 154, 46, 0.6)); }
+.e-hero svg { display: block; margin: 0 auto; width: 5.5rem; height: 5.5rem; filter: drop-shadow(0 0 16px rgba(255, 154, 46, 0.6)); }
 .e-hero h1 { margin-top: 0.75rem; font-size: 2.1rem; letter-spacing: 0.42em; padding-left: 0.42em; text-transform: uppercase; color: #fff; text-shadow: 0 0 26px rgba(95, 216, 242, 0.4); }
 .e-hero p.e-tag { margin-top: 0.4rem; font-size: 0.72rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--e-cyan); }
