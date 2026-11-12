@@ -410,6 +410,43 @@ SPECS = [
             "prima_scrittura": {"type": "string", "description": "AAAA-MM-GG in cui scrivere il primo messaggio"}},
             "required": ["nome", "link_fonte"]}}},
     {"type": "function", "function": {
+        "name": "contatto_aggiungi",
+        "description": "Aggiunge un NUOVO contatto professionale pubblico da contattare (locale, organizzatore, festival, agenzia...). Servono TUTTI questi dati: nome, tipo, zona, "
+                       "canale, il riferimento del canale (email per 'email'; telefono per 'telefono' o 'whatsapp'; handle per 'dm_instagram'), link della fonte pubblica, priorita, prima_scrittura. "
+                       "Se anche UNO solo manca, NON inventarlo e NON salvare: chiedi al proprietario i dati mancanti (anche tutti insieme in un solo messaggio) e richiama lo strumento "
+                       "quando li hai. Solo contatti professionali pubblici. Non contatta nessuno.",
+        "parameters": {"type": "object", "properties": {
+            "nome": {"type": "string"}, "tipo": {"type": "string", "description": "locale, festival, pro loco, sagra, agenzia, artista, altro"},
+            "zona": {"type": "string", "description": "città o zona"},
+            "canale": {"type": "string", "enum": ["email", "telefono", "whatsapp", "dm_instagram", "di_persona"]},
+            "email": {"type": "string"}, "telefono": {"type": "string"}, "handle": {"type": "string", "description": "account Instagram o altro riferimento"},
+            "link_fonte": {"type": "string", "description": "pagina pubblica da cui viene il contatto"},
+            "priorita": {"type": "integer", "description": "1 alta, 2 media, 3 bassa"},
+            "prima_scrittura": {"type": "string", "description": "AAAA-MM-GG in cui scrivere il primo messaggio"},
+            "note": {"type": "string", "description": "perché è utile, cosa dire"}},
+            "required": []}}},
+    {"type": "function", "function": {
+        "name": "mail_stato",
+        "description": "Dice se la posta è configurata, quante mail sono partite oggi (limite giornaliero) e se il tracciamento delle aperture è attivo.",
+        "parameters": {"type": "object", "properties": {}}}},
+    {"type": "function", "function": {
+        "name": "mail_proponi",
+        "description": "Prepara una MAIL da inviare a UNA persona. NON parte: il proprietario vede l'anteprima completa e decide con i bottoni; solo se approva la mail viene inviata. "
+                       "Solo contatti professionali pubblici, testo in italiano semplice e senza inventare nulla (niente date, cachet o accordi che il proprietario non ha detto). "
+                       "Se hai il contatto_id, dopo l'invio il contatto passa a 'in attesa di risposta' con il follow-up. Max 2500 caratteri. Controlla prima mail_stato.",
+        "parameters": {"type": "object", "properties": {
+            "a": {"type": "string", "description": "indirizzo email del destinatario"}, "oggetto": {"type": "string"}, "testo": {"type": "string"},
+            "motivo": {"type": "string", "description": "perché scrivi a questa persona, per il proprietario"},
+            "contatto_id": {"type": "integer"}}, "required": ["a", "oggetto", "testo", "motivo"]}}},
+    {"type": "function", "function": {
+        "name": "mail_registro",
+        "description": "Le ultime mail inviate, con quante volte risultano aperte (il «pixel» è indicativo: alcuni programmi di posta aprono le immagini da soli, quindi «aperta» non vuol dire «letta»).",
+        "parameters": {"type": "object", "properties": {}}}},
+    {"type": "function", "function": {
+        "name": "mail_non_contattare",
+        "description": "Mette un indirizzo nell'elenco di chi NON va più contattato (quando la persona lo chiede o il proprietario lo decide). Da quel momento nessuna mail verso quell'indirizzo.",
+        "parameters": {"type": "object", "properties": {"email": {"type": "string"}, "motivo": {"type": "string"}}, "required": ["email"]}}},
+    {"type": "function", "function": {
         "name": "contatti_leggi",
         "description": "Elenca i contatti salvati con stato, ultimo contatto, quanti messaggi sono partiti e quando è la prossima azione. Filtri opzionali.",
         "parameters": {"type": "object", "properties": {"cerca": {"type": "string"}, "stato": {"type": "string"}}}}},
@@ -551,8 +588,9 @@ SPECS = [
 class Tools:
     def __init__(self, db, ig=None, browser_url: str = "", browser_token: str = "",
                  fetch=fetch_public, render=render_with_browser, search=None, to_png=svg_to_png, kb=None, disabled=(), ext=None,
-                 consult=None):
+                 consult=None, posta=None):
         self.db, self.ig, self.search = db, ig, search
+        self.posta = posta  # callable() -> posta.Config (riletta a ogni uso: le modifiche del pannello valgono subito); None = niente posta
         self.kb, self.disabled = kb, set(disabled or ())
         self.ext = ext  # esecutore delle estensioni approvate (None = funzione spenta)
         self.consult = consult  # callable(id, richiesta, contesto) -> parere (None = esperti spenti)
@@ -581,6 +619,7 @@ class Tools:
         out = [s for s in out if self.kb or not s["function"]["name"].startswith("kb_")]
         out = [s for s in out if self.ext or not s["function"]["name"].startswith("estension")]
         out = [s for s in out if self.consult or not s["function"]["name"].startswith("esper")]
+        out = [s for s in out if self._posta_ok() or not s["function"]["name"].startswith("mail_")]
         out += self.ext.specs() if self.ext else []  # strumenti delle estensioni approvate e attive
         return [s for s in out if s["function"]["name"] not in self.disabled]  # strumenti spenti dal profilo dell'account
 
@@ -1035,6 +1074,104 @@ class Tools:
         if not cid:
             return "Già in archivio."
         return f"Contatto #{cid} salvato." + (f" Ti ricorderò di scrivergli il {when}." if when else "")
+
+    def _posta_ok(self) -> bool:
+        try:
+            return bool(self.posta and self.posta().configured)
+        except Exception:
+            return False
+
+    def t_contatto_aggiungi(self, nome="", tipo="", zona="", canale="", email="", telefono="", handle="", link_fonte="", priorita=None,
+                            prima_scrittura="", note=""):
+        from . import posta as _posta
+        dati = {"nome": nome, "tipo": tipo, "zona": zona, "canale": canale, "link_fonte": link_fonte, "priorita": priorita, "prima_scrittura": prima_scrittura}
+        mancano = [k for k, v in dati.items() if v in (None, "", 0) or not str(v).strip()]
+        rif = {"email": ("email", email), "telefono": ("telefono", telefono), "whatsapp": ("telefono", telefono), "dm_instagram": ("handle", handle)}
+        if canale in rif and not str(rif[canale][1] or "").strip():
+            mancano.append(rif[canale][0])
+        if mancano:
+            raise ToolError("Mancano questi dati: " + ", ".join(mancano) + ". NON inventarli e non salvare: chiedili al proprietario (anche tutti insieme in un solo messaggio) "
+                            "e poi richiama contatto_aggiungi con tutti i dati.")
+        if canale == "email" and not _posta.valid_email(email):
+            raise ToolError("l'indirizzo email non sembra valido: chiedi al proprietario di ricontrollarlo")
+        if email and not _posta.valid_email(email):
+            raise ToolError("l'indirizzo email non sembra valido: chiedi al proprietario di ricontrollarlo")
+        if not str(link_fonte).startswith("http"):
+            raise ToolError("serve il link della fonte pubblica (deve iniziare con http)")
+        try:
+            pr = int(priorita)
+        except (TypeError, ValueError):
+            raise ToolError("la priorità deve essere 1 (alta), 2 (media) o 3 (bassa)")
+        if pr not in (1, 2, 3):
+            raise ToolError("la priorità deve essere 1 (alta), 2 (media) o 3 (bassa)")
+        when = self._iso_day(prima_scrittura, "prima_scrittura")
+        cid = self.db.contact_add(str(nome).strip()[:120], str(tipo).strip()[:40], str(link_fonte).strip()[:300], str(note or ""),
+                                  handle=(handle or None) and str(handle).strip()[:80], priority=pr, next_followup=when, status="da_scrivere",
+                                  channel=str(canale)[:30], email=(email or None) and str(email).strip().lower()[:254],
+                                  phone=(telefono or None) and str(telefono).strip()[:40], zone=str(zona).strip()[:80])
+        if not cid:
+            return "Già in archivio."
+        self.db.audit("manager", "contatto_aggiunto", f"#{cid}")
+        return f"Contatto #{cid} salvato. Ti ricorderò di scrivergli il {when}."
+
+    def t_mail_stato(self):
+        cfg = self.posta()
+        return json.dumps({"configurata": cfg.configured, "inviate_oggi": self.db.mail_today(), "limite_giornaliero": cfg.max_day,
+                           "tracciamento_aperture": cfg.tracking_possible}, ensure_ascii=False)
+
+    def t_mail_proponi(self, a, oggetto, testo, motivo, contatto_id=None):
+        from . import approvals, posta as _posta
+        cfg = self.posta()
+        a = str(a or "").strip().lower()
+        if not _posta.valid_email(a):
+            raise ToolError("indirizzo del destinatario non valido")
+        if self.db.mail_blocked(a):
+            raise ToolError("questo indirizzo è nell'elenco di chi non va contattato: non scrivergli")
+        if self.db.mail_today() >= cfg.max_day:
+            raise ToolError(f"limite di {cfg.max_day} mail al giorno raggiunto: riprova domani")
+        if len(self.proposals) >= 3:
+            return "Troppe proposte insieme: ne bastano una o due."
+        try:
+            _posta.build_message(cfg, a, oggetto, testo)  # controlla oggetto, testo e lunghezze prima di disturbare il proprietario
+        except _posta.PostaError as e:
+            raise ToolError(str(e))
+        cid = None
+        if contatto_id:
+            if not self.db.contact_get(int(contatto_id)):
+                raise ToolError("contatto non trovato")
+            cid = int(contatto_id)
+        recenti = self.db.mail_recent_to(a)
+        avviso = f"\n\n⚠️ A questo indirizzo hai già scritto {recenti} volta/e negli ultimi 14 giorni." if recenti else ""
+        anteprima = f"A: {a}\nOggetto: {oggetto}\n\n{str(testo).strip()}{avviso}"
+        aid = approvals.create(self.db, "invio_mail", f"Mail a {a}", f"Motivo: {str(motivo)[:300]}\n\n{anteprima}",
+                               extra={"to": a, "subject": str(oggetto).strip()[:200], "body": str(testo).strip(), "contact_id": cid})
+        self.proposals.append(aid)
+        return (f"Proposta #{aid} pronta: il proprietario vede l'anteprima e i bottoni. La mail NON è partita: parte solo se approva. "
+                "Nella risposta non ripetere il testo: dì in una riga a chi scrivi e perché.")
+
+    def t_mail_registro(self):
+        import datetime as dt
+        rows = self.db.mail_list(30)
+        out = []
+        for r in rows:
+            quando = dt.datetime.fromtimestamp(r["ts"]).strftime("%d/%m/%Y %H:%M")
+            if not r["tracciata"]:
+                ap = "senza tracciamento"
+            elif r["aperture"]:
+                ap = f"aperta {r['aperture']} volte (prima: {dt.datetime.fromtimestamp(r['prima_apertura']).strftime('%d/%m %H:%M')})"
+            else:
+                ap = "nessuna apertura registrata"
+            out.append({"id": r["id"], "inviata": quando, "a": r["a"], "oggetto": r["oggetto"], "aperture": ap, "contatto": r["contatto"]})
+        return json.dumps(out, ensure_ascii=False) if out else "Nessuna mail inviata."
+
+    def t_mail_non_contattare(self, email, motivo=""):
+        from . import posta as _posta
+        email = str(email or "").strip().lower()
+        if not _posta.valid_email(email):
+            raise ToolError("indirizzo non valido")
+        nuovo = self.db.mail_block(email, str(motivo or ""))
+        self.db.audit("manager", "mail_bloccata", "indirizzo")
+        return "Fatto: non gli scriverò più." if nuovo else "Era già nell'elenco."
 
     def t_contatti_leggi(self, cerca="", stato=""):
         rows = self.db.contacts_list(cerca, 60, stato)

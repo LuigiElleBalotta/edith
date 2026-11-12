@@ -13,6 +13,7 @@
 - **Segue artisti simili e concorrenti** (profili pubblici professionali) e li confronta nel tempo, con grafici.
 - **Usa un archivio di conoscenza** (un tuo repository Git) come memoria di lungo periodo: lo legge e propone modifiche, che si salvano solo dopo la tua approvazione.
 - **Impara e si estende, solo con il tuo OK**: annota cosa impara e propone regole; può proporre **estensioni** (un ricettario con la sua pagina, timer, meteo da API…) che vivono fuori dal contenitore. Niente si attiva senza approvazione. Vedi [docs/ESTENSIONI.md](docs/ESTENSIONI.md).
+- **Scrive mail, sempre con il tuo OK**: prepara le mail ai contatti da scrivere e le manda solo se premi «Approva» su Telegram; ti dice quali risultano aperte. Vedi [docs/POSTA.md](docs/POSTA.md).
 - **Studia i tuoi documenti**: dagli un corso in PDF, una guida o degli appunti (da Telegram con `/impara` o dal pannello): li legge, ne ricava un riassunto e dei principi, e quando una tua domanda c'entra ritrova da solo i passaggi giusti citando la fonte e la pagina. Vedi [docs/BIBLIOTECA.md](docs/BIBLIOTECA.md).
 - **Ha un team di esperti** (strategia social, contenuti, PR, bandi, vendite…) da cui chiede un secondo parere: ruoli del progetto open source [agency-agents](https://github.com/msitarzewski/agency-agents), solo consulenza, senza strumenti. Vedi [docs/ESPERTI.md](docs/ESPERTI.md).
 - **Funziona in gruppo** (una band, due soci): ognuno abilitato, tutti vedono cosa fa il manager.
@@ -63,6 +64,7 @@ Per aggiungere altri account, in qualsiasi momento (parte da solo, senza riavvia
 ## Documentazione
 - [docs/SETUP.md](docs/SETUP.md): **la guida completa, dall'inizio alla fine** (server, servizio IA, bot, Instagram, pannello in HTTPS, aggiornamenti, problemi comuni).
 - [docs/GUIDARE-L-UTENTE.md](docs/GUIDARE-L-UTENTE.md): per chi aiuta qualcuno a installarlo (anche un assistente IA): come condurlo, cosa fa chi e cosa non va mai fatto.
+- [docs/POSTA.md](docs/POSTA.md): le mail: come configurarle, approvazione, limiti e segnale di apertura.
 - [docs/BIBLIOTECA.md](docs/BIBLIOTECA.md): la Biblioteca: come il manager studia un PDF o una guida e se lo ricorda, limiti e sicurezza.
 - [docs/ESPERTI.md](docs/ESPERTI.md): gli esperti (consulenti): chi sono, cosa non possono fare, come si accendono.
 - [docs/ESTENSIONI.md](docs/ESTENSIONI.md): le estensioni e le lezioni: come funzionano, come si approvano, formato del manifest.

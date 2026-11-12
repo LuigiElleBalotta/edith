@@ -80,6 +80,12 @@ CREATE TABLE IF NOT EXISTS pezzi(
   id INTEGER PRIMARY KEY AUTOINCREMENT, fonte_id INTEGER NOT NULL, ordine INTEGER NOT NULL, pagina INTEGER NOT NULL DEFAULT 0,
   titolo TEXT, testo TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS pezzi_fonte ON pezzi(fonte_id);
+CREATE TABLE IF NOT EXISTS mail_inviate(
+  id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, contact_id INTEGER, to_addr TEXT NOT NULL, subject TEXT NOT NULL,
+  body TEXT NOT NULL, token TEXT NOT NULL, tracking INTEGER NOT NULL DEFAULT 0, aperture INTEGER NOT NULL DEFAULT 0,
+  prima_apertura REAL, ultima_apertura REAL);
+CREATE INDEX IF NOT EXISTS mail_token ON mail_inviate(token);
+CREATE TABLE IF NOT EXISTS mail_blocco(addr TEXT PRIMARY KEY, ts REAL NOT NULL, motivo TEXT);
 CREATE TABLE IF NOT EXISTS watch_snap(
   username TEXT NOT NULL, day TEXT NOT NULL, followers INTEGER, media_count INTEGER, avg_likes REAL, avg_comments REAL,
   PRIMARY KEY(username, day));
@@ -122,7 +128,8 @@ class Db:
         """Aggiunge le colonne nuove alle tabelle già esistenti (i database vecchi non si perdono)."""
         have = {r[1] for r in self._c.execute("PRAGMA table_info(contacts)").fetchall()}
         for col, typ in (("handle", "TEXT"), ("channel", "TEXT"), ("priority", "INTEGER"), ("next_followup", "TEXT"),
-                         ("last_contact", "TEXT"), ("contact_count", "INTEGER NOT NULL DEFAULT 0"), ("last_reminder", "TEXT")):
+                         ("last_contact", "TEXT"), ("contact_count", "INTEGER NOT NULL DEFAULT 0"), ("last_reminder", "TEXT"),
+                         ("email", "TEXT"), ("phone", "TEXT"), ("zone", "TEXT")):
             if col not in have:
                 self._c.execute(f"ALTER TABLE contacts ADD COLUMN {col} {typ}")
 
@@ -311,17 +318,18 @@ class Db:
     CONTACT_STATUSES = ("da_valutare", "da_scrivere", "interessante", "in_attesa_risposta", "risposto", "scartato", "escluso", "contattato")
 
     def contact_add(self, name: str, kind: str, source_url: str, notes: str = "", handle: str = None, priority: int = None,
-                    next_followup: str = None, status: str = "da_valutare", channel: str = None) -> int:
+                    next_followup: str = None, status: str = "da_valutare", channel: str = None,
+                    email: str = None, phone: str = None, zone: str = None) -> int:
         row = self._x("SELECT id FROM contacts WHERE source_url=? AND name=? LIMIT 1", (source_url, name)).fetchone()
         if row:
             return 0
-        return self._x("INSERT INTO contacts(ts,name,kind,source_url,notes,status,handle,priority,next_followup,channel) "
-                       "VALUES(?,?,?,?,?,?,?,?,?,?)",
-                       (time.time(), name, kind, source_url, notes, status, handle, priority, next_followup, channel)).lastrowid
+        return self._x("INSERT INTO contacts(ts,name,kind,source_url,notes,status,handle,priority,next_followup,channel,email,phone,zone) "
+                       "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                       (time.time(), name, kind, source_url, notes, status, handle, priority, next_followup, channel, email, phone, zone)).lastrowid
 
-    _CONTACT_COLS = "id,name,kind,source_url,notes,status,handle,channel,priority,next_followup,last_contact,contact_count"
+    _CONTACT_COLS = "id,name,kind,source_url,notes,status,handle,channel,priority,next_followup,last_contact,contact_count,email,phone,zone"
     _CONTACT_KEYS = ("id", "nome", "tipo", "fonte", "note", "stato", "handle", "canale", "priorita", "prossima_azione_il",
-                     "ultimo_contatto", "messaggi_inviati")
+                     "ultimo_contatto", "messaggi_inviati", "email", "telefono", "zona")
 
     def contacts_list(self, text: str = "", limit: int = 30, status: str = ""):
         cond, args = [], []
@@ -359,6 +367,35 @@ class Db:
 
     def contact_reminded(self, contact_id: int, today: str):
         self._x("UPDATE contacts SET last_reminder=? WHERE id=?", (today, contact_id))
+
+    # --- posta inviata (dopo l'approvazione del proprietario) ---
+    def mail_log(self, contact_id, to_addr: str, subject: str, body: str, token: str, tracking: bool) -> int:
+        return self._x("INSERT INTO mail_inviate(ts,contact_id,to_addr,subject,body,token,tracking) VALUES(?,?,?,?,?,?,?)",
+                       (time.time(), contact_id, to_addr, subject, body, token, 1 if tracking else 0)).lastrowid
+
+    def mail_open(self, token: str) -> bool:
+        """Registra l'apertura (solo l'ora: nessun IP, nessun programma di posta)."""
+        now = time.time()
+        return self._x("UPDATE mail_inviate SET aperture=aperture+1, prima_apertura=COALESCE(prima_apertura,?), ultima_apertura=? "
+                       "WHERE token=? AND tracking=1", (now, now, token)).rowcount > 0
+
+    def mail_today(self) -> int:
+        import datetime as _d
+        start = _d.datetime.combine(_d.date.today(), _d.time.min).timestamp()
+        return self._x("SELECT COUNT(*) FROM mail_inviate WHERE ts>=?", (start,)).fetchone()[0]
+
+    def mail_recent_to(self, addr: str, days: int = 14) -> int:
+        return self._x("SELECT COUNT(*) FROM mail_inviate WHERE lower(to_addr)=lower(?) AND ts>=?", (addr, time.time() - days * 86400)).fetchone()[0]
+
+    def mail_list(self, limit: int = 30) -> list:
+        cur = self._x("SELECT id,ts,to_addr,subject,tracking,aperture,prima_apertura,contact_id FROM mail_inviate ORDER BY id DESC LIMIT ?", (limit,))
+        return [dict(zip(("id", "ts", "a", "oggetto", "tracciata", "aperture", "prima_apertura", "contatto"), r)) for r in cur.fetchall()]
+
+    def mail_blocked(self, addr: str) -> bool:
+        return self._x("SELECT 1 FROM mail_blocco WHERE addr=?", ((addr or "").strip().lower(),)).fetchone() is not None
+
+    def mail_block(self, addr: str, motivo: str = "") -> bool:
+        return self._x("INSERT OR IGNORE INTO mail_blocco(addr,ts,motivo) VALUES(?,?,?)", ((addr or "").strip().lower(), time.time(), motivo[:200])).rowcount > 0
 
     # --- account da monitorare (concorrenti, artisti simili) ---
     def watch_add(self, username: str, note: str = "") -> bool:

@@ -57,6 +57,13 @@ Si leggono solo file di testo. Mai letti né scritti: `secrets/`, `.env`, chiavi
 ## Lavori automatici
 Report, ricerca opportunità e piano partono da soli ma fanno solo due cose: leggere (Instagram, web) e scrivere al proprietario su Telegram, in silenzio. Limiti: 20 attività in attesa (entro 60 giorni), 5 domande in coda, una domanda ogni 20 ore e solo tra le 10 e le 20, al massimo 3 promemoria contatti al giorno. Se un lavoro fallisce 3 volte nella settimana rinuncia. `/pausa` ferma tutto.
 
+## Posta (mail in uscita)
+Vedi [docs/POSTA.md](docs/POSTA.md).
+- **Ogni mail passa dall'approvazione a bottoni del proprietario**, con anteprima completa: il manager non può inviare da solo (`approvals.py`, hook `invio_mail`). Test: `bot/tests/test_posta.py`.
+- **Password SMTP** solo in `accounts/_posta.env` (600, mai su Git, mai mostrata, mai nei log o negli errori). Connessione cifrata con certificato verificato; «nessuna cifratura» solo verso la rete interna.
+- **Niente intestazioni iniettate** (a capo vietati in nome, oggetto, indirizzi), una persona per mail, limite giornaliero, elenco dei non contattabili ricontrollato all'invio.
+- **Segnale di apertura**: un'immagine 1×1 su `/t/<codice>.gif` (l'unica rotta senza accesso); registra solo l'ora, risponde sempre allo stesso modo anche con codici falsi, non scrive niente se il codice non esiste. Informativa e consenso restano una decisione del proprietario.
+
 ## Biblioteca (documenti dati dal proprietario)
 Vedi [docs/BIBLIOTECA.md](docs/BIBLIOTECA.md).
 - **Il contenuto di un documento è un dato, mai un'istruzione.** Al manager arriva in un blocco etichettato che dice di non obbedire a ordini scritti dentro; il documento non può far pubblicare o scrivere (il manager non ha quelle funzioni) e i principi che ne ricava diventano regole solo con l'approvazione del proprietario.

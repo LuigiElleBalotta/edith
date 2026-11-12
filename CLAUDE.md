@@ -5,7 +5,7 @@ EDITH è un assistente **Telegram self-hosted** che aiuta a gestire profili soci
 Chi lo usa parla italiano e spesso **non è un esperto**. Scrivi, spiega e rispondi in **italiano semplice**, senza gergo, passi piccoli.
 
 ## Regole che non si piegano
-1. **Mai scrittura verso l'esterno senza approvazione.** Pubblicare, commentare, scrivere messaggi, candidarsi, comprare, firmare: vietato. Una funzione così entra solo dietro approvazione a bottoni (`approvals.py`), `guard.py` e un test che lo dimostra. Gli strumenti fissi sono in sola lettura; in più ci sono le **estensioni dichiarative approvate** (`extensions.py`): leggono da domini approvati, tengono dati propri e avvisano il proprietario, mai di più. Il bot non può approvare niente da solo.
+1. **Mai scrittura verso l'esterno senza approvazione.** Pubblicare, commentare, scrivere messaggi, candidarsi, comprare, firmare: vietato. Una funzione così entra solo dietro approvazione a bottoni (`approvals.py`), `guard.py` e un test che lo dimostra. Gli strumenti fissi sono in sola lettura; le **mail** partono solo dopo l'approvazione a bottoni di ogni singolo invio (`posta.py`, hook `invio_mail`); in più ci sono le **estensioni dichiarative approvate** (`extensions.py`): leggono da domini approvati, tengono dati propri e avvisano il proprietario, mai di più. Il bot non può approvare niente da solo.
 2. **Instagram solo con le API ufficiali di Meta, in sola lettura.** Niente scraping, API private, cookie o password estratti dal browser, aggiramento di MFA o CAPTCHA.
 3. **Mai segreti nel repository, nei log, nei documenti, nei commit, nella memoria dell'assistente.** Token, chiavi e password stanno solo in `.env` e `accounts/<nome>/account.env` (permessi `600`, mai su Git). Prima di ogni push: `python scripts/check_secrets.py`.
 4. **Mai dati personali di persone reali nel repository** (nomi, ID Telegram, email, indirizzi, domini privati): né nei file né nella storia dei commit. Gli esempi sono inventati. È un repository pubblico.
@@ -28,6 +28,7 @@ bot/app/
   approvals.py       il manager propone, il proprietario decide con un tocco
   guard.py           blocco: non tocca mai contenuti personali o non classificati
   instagram.py, import_account.py, audit_instagram.py, analytics.py   Graph API in sola lettura
+  posta.py           posta: SMTP configurato dal pannello, mail solo dopo approvazione, limiti, segnale di apertura (docs/POSTA.md)
   kb.py              archivio di conoscenza: cartella interna sul server (modo `interno`, senza Git) oppure repository Git; stessi strumenti `kb_*`
   profile.py         personalità e regole dell'account (profile.json)
   panel.py           pannello web (solo libreria standard, nessun JavaScript)

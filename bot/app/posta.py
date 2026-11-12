@@ -106,9 +106,10 @@ def check_settings(form: dict, current: Config) -> tuple:
     reply = (form.get("reply_to") or "").strip()
     if reply and not valid_email(reply):
         return None, "L'indirizzo per le risposte non va bene."
-    name = " ".join((form.get("sender_name") or "").split())[:80]
-    if re.search(r"[\r\n<>\"]", name):
+    raw_name = form.get("sender_name") or ""
+    if re.search(r"[\r\n<>\"\x00]", raw_name):
         return None, "Il nome del mittente contiene caratteri non ammessi."
+    name = " ".join(raw_name.split())[:80]
     url = (form.get("public_url") or "").strip().rstrip("/")
     if url and not re.match(r"^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?$", url):
         return None, "L'indirizzo pubblico del pannello deve essere del tipo https://edith.tuodominio.it (senza barre alla fine)."
@@ -120,8 +121,8 @@ def check_settings(form: dict, current: Config) -> tuple:
     if re.search(r"[\r\n]", user):
         return None, "Il nome utente non va bene."
     password = form.get("password") or ""
-    if re.search(r"[\r\n]", password):
-        return None, "La password non va bene."
+    if re.search(r"[\r\n]", password) or password != password.strip() or (len(password) >= 2 and password[0] == password[-1] and password[0] in "'\""):
+        return None, "La password non va bene (niente spazi all'inizio o alla fine, e non può essere racchiusa tra apici)."
     firma = (form.get("firma") or "").strip()[:500].replace("\r", "").replace("\n", "\\n")
     vals = {"SMTP_HOST": host, "SMTP_PORT": str(port), "SMTP_SECURITY": sec, "SMTP_USER": user, "MAIL_FROM": sender, "MAIL_FROM_NAME": name,
             "MAIL_REPLY_TO": reply, "MAIL_PUBLIC_URL": url, "MAIL_PIXEL": "1" if form.get("pixel") else "0", "MAIL_FIRMA": firma,
@@ -251,3 +252,22 @@ def test_connection(cfg: Config, to: str) -> str:
     msg = build_message(cfg, to, "Prova di EDITH", "Questa è una mail di prova mandata da EDITH.\nSe la leggi, la posta funziona.")
     send(cfg, msg)
     return f"Mail di prova partita verso {to}. Controlla la casella (anche nella posta indesiderata)."
+
+
+def deliver(db, pc: Config, ex: dict, slug: str, today: str, from_name: str = "") -> str:
+    """Invia una mail GIÀ approvata dal proprietario. Ricontrolla blocco e limite, registra l'invio, aggiorna il contatto."""
+    if not pc.configured:
+        raise PostaError("la posta non è configurata")
+    if db.mail_blocked(ex["to"]):
+        raise PostaError("questo indirizzo è tra quelli da non contattare")
+    if db.mail_today() >= pc.max_day:
+        raise PostaError(f"limite di {pc.max_day} mail al giorno raggiunto")
+    token = new_token(slug)
+    pixel = pixel_url(pc, token) if pc.tracking_possible else ""
+    msg = build_message(pc, ex["to"], ex["subject"], ex["body"], from_name=from_name, pixel=pixel)
+    send(pc, msg)
+    db.mail_log(ex.get("contact_id"), ex["to"], ex["subject"], ex["body"], token, bool(pixel))
+    db.audit("manager", "mail_inviata", "approvata dal proprietario")
+    if ex.get("contact_id"):
+        db.contact_sent(int(ex["contact_id"]), today, 14, "email")
+    return f"Mail partita verso {ex['to']}." + (" Ti dirò se risulta aperta." if pixel else "")

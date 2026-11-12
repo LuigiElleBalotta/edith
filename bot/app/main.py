@@ -587,9 +587,18 @@ def run_account(cfg, stop=None) -> int:
         def _ask_esperto(system, user):
             return ai.chat(cfg.model_normal, [{"role": "system", "content": system}, {"role": "user", "content": user}], max_tokens=1500)
         return esp.consult(_ask_esperto, eid, richiesta, contesto, spenti=prof.load(db.profile_dir).get("esperti_spenti") or [])
+    from . import posta as _posta
+    posta_file = _posta.file_for(os.path.dirname(db.profile_dir) if getattr(db, "profile_dir", "") else cfg.data_dir)
+    posta_cfg = lambda: _posta.load(posta_file)  # riletta a ogni uso: le modifiche dal pannello valgono subito
+
+    def _invia_mail(db_, a):  # eseguita solo DOPO l'approvazione dei bottoni
+        import datetime as _dt
+        from .scheduler import TZ
+        return _posta.deliver(db_, posta_cfg(), a.get("extra") or {}, cfg.slug, _dt.datetime.now(TZ).date().isoformat(), profilo.get("nome_account") or "")
+    db.hooks["invio_mail"] = _invia_mail
     tools = Tools(db, ig, cfg.browser_url, cfg.browser_token,
                   search=omniroute_search(cfg.ai_base_url, cfg.ai_api_key), kb=kb if kb.configured else None,
-                  disabled=profilo.get("strumenti_spenti") or (), ext=runtime, consult=_consulta)
+                  disabled=profilo.get("strumenti_spenti") or (), ext=runtime, consult=_consulta, posta=posta_cfg)
     agent = Agent(ai, cfg, db, tools)
     jobs = jobs_for(profilo)
     from . import biblioteca as bib

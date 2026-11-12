@@ -26,6 +26,7 @@ import time
 import urllib.parse
 
 from . import accounts, config as cfgmod, logbuf
+from .db import Db
 
 SESSION_SECONDS = 8 * 3600
 MAX_BODY = 64 * 1024
@@ -117,7 +118,7 @@ def page(title: str, body: str, csrf: str = "", logged: bool = True) -> str:
     if logged:
         nav = ('<header class="border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"><div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-6">'
                '<a href="/" class="e-brand">' + _logo() + '<span><b>E.D.I.T.H.</b><small>Manager social</small></span></a>'
-               '<nav class="e-topnav"><a href="/">Account</a><a href="/system">Stato</a></nav><span class="e-online"><i class="e-led e-led-on"></i>sistemi in linea</span>'
+               '<nav class="e-topnav"><a href="/">Account</a><a href="/posta">Posta</a><a href="/system">Stato</a></nav><span class="e-online"><i class="e-led e-led-on"></i>sistemi in linea</span>'
                f'<form method="post" action="/logout"><input type="hidden" name="csrf" value="{H(csrf)}">'
                '<button class="text-sm text-slate-600 underline hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">Esci</button></form></div></header>')
     return ('<!doctype html><html lang="it" class="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#050b17">'
@@ -303,6 +304,64 @@ class Panel:
                 return d if isinstance(d, dict) else {}
         except (OSError, ValueError):
             return {}
+
+    # ----- posta (SMTP) -----
+    def posta_file(self) -> str:
+        from . import posta
+        return posta.file_for(self.accounts_dir)
+
+    def posta_page(self, s, msg: str = "", err: str = "") -> str:
+        from . import posta
+        pc = posta.load(self.posta_file())
+        csrf = f'<input type="hidden" name="csrf" value="{H(s["csrf"])}">'
+        stato = pill("configurata", "ok") if pc.configured else pill("non configurata")
+        pw = pill("password salvata", "ok") if pc.has_password else pill("nessuna password")
+        form = (f'<form method="post" action="/posta/salva" class="e-form2">{csrf}'
+                + field("Server di posta (SMTP)", "host", pc.host, "L'indirizzo del server che spedisce. Esempio: <i>mail.tuodominio.it</i>.")
+                + field("Porta", "port", str(pc.port), "Di solito 587 (STARTTLS) oppure 465 (SSL).")
+                + choice("Protezione", "security", [("starttls", "STARTTLS (consigliata, porta 587)"), ("ssl", "SSL/TLS (porta 465)"),
+                                                    ("nessuna", "Nessuna (solo server nella tua rete)")], pc.security, "La connessione è sempre controllata: il certificato deve essere valido.")
+                + field("Nome utente", "user", pc.user, "Di solito l'indirizzo completo della casella. Esempio: <i>info@tuodominio.it</i>.")
+                + field("Password", "password", "", "Si scrive ma <b>non si mostra mai</b>. Lascia vuoto per tenere quella già salvata. " + pw, "password")
+                + field("Indirizzo da cui partono le mail", "sender", pc.sender, "Esempio: <i>info@tuodominio.it</i>.")
+                + field("Nome del mittente (facoltativo)", "sender_name", pc.sender_name, "Come compare a chi riceve. Vuoto = il nome dell'account.")
+                + field("Risposte a (facoltativo)", "reply_to", pc.reply_to, "Se vuoi che le risposte arrivino a un altro indirizzo.")
+                + field("Indirizzo pubblico di questo pannello", "public_url", pc.public_url, "Serve al segnale di apertura. Deve iniziare con https://. Esempio: <i>https://edith.tuodominio.it</i>.")
+                + field("Massimo di mail al giorno", "max_day", str(pc.max_day), "Un freno di sicurezza. Predefinito 20.")
+                + area("Firma (facoltativa)", "firma", pc.firma.replace(chr(10), chr(10)), "Si aggiunge in fondo a ogni mail. Esempio: <i>Le Luna Nera · info@tuodominio.it</i>", 3)
+                + f'<div class="mt-4"><label class="flex items-start gap-2"><input type="checkbox" name="pixel" value="1"{" checked" if pc.pixel else ""} class="mt-1.5">'
+                  f'<span><b>Segui le aperture</b><br><span class="{HELP}">Mette nelle mail un\'immagine invisibile (1 pixel) che dice se la mail è stata aperta. '
+                  f'Registra solo l\'ora, mai l\'indirizzo IP né il programma di posta. Serve l\'indirizzo pubblico qui sopra.</span></span></label></div>'
+                + f'<div class="e-actions mt-5">{btn("Salva")}</div></form>')
+        prova = (f'<form method="post" action="/posta/prova">{csrf}<p class="{HELP}">Manda una mail di prova vera: si collega, accede e spedisce. Se qualcosa non va, ti dico cosa.</p>'
+                 f'<input class="{INPUT} mt-2" name="to" placeholder="un tuo indirizzo, per esempio nome@esempio.it" required>'
+                 f'<div class="mt-3">{btn("Invia la mail di prova")}</div></form>')
+        info = ('<ul class="mt-3 list-disc pl-5 text-slate-600 dark:text-slate-300"><li>Il manager <b>prepara</b> la mail e tu la vedi per intero su Telegram: <b>parte solo se premi «Approva»</b>.</li>'
+                '<li>Una persona per mail, mai in copia nascosta. C\'è un limite al giorno e un elenco di indirizzi da non contattare più.</li>'
+                '<li>In fondo a ogni mail c\'è una riga per smettere di ricevere: chi risponde «non scrivermi più» va messo nell\'elenco.</li>'
+                '<li>Le aperture sono indicative: alcuni programmi di posta aprono le immagini da soli, quindi «aperta» non vuol dire sempre «letta».</li>'
+                '<li>Le mail in uscita sono la stessa casella per tutti gli account (puoi cambiare solo il nome del mittente).</li></ul>')
+        body = ('<h1 class="text-2xl font-bold">Posta</h1>'
+                '<p class="mt-2 text-slate-600 dark:text-slate-300">Qui colleghi un server di posta (SMTP), per esempio quello della band. Appena è configurato, il manager può preparare mail per i contatti da scrivere. '
+                f'Stato: {stato}</p>' + flash(msg, err)
+                + card("Server di posta", "Le impostazioni valgono per tutti gli account.", form, "", "", "e-span")
+                + card("Prova", "", prova) + card("Come funziona", "", info))
+        return page("Posta", body, s["csrf"])
+
+    def do_posta_save(self, form) -> str:
+        from . import posta
+        vals, err = posta.check_settings(form, posta.load(self.posta_file()))
+        if err:
+            return err
+        update_env(self.posta_file(), vals)
+        return ""
+
+    def do_posta_test(self, form) -> tuple:
+        from . import posta
+        try:
+            return posta.test_connection(posta.load(self.posta_file()), (form.get("to") or "").strip()), ""
+        except posta.PostaError as e:
+            return "", f"Non riesco a spedire: {e}."
 
     def _own_ai(self, cfg) -> bool:
         return bool(cfgmod.parse_env_file(os.path.join(cfg.profile_dir, "account.env")).get("OMNIROUTE_API_KEY"))
@@ -689,6 +748,28 @@ def make_handler(panel: Panel):
             self.end_headers()
             self.wfile.write(data)
 
+        GIF = bytes.fromhex("47494638396101000100800000000000ffffff21f90401000000002c00000000010001000002024401003b")
+
+        def _pixel(self, slug, token):
+            try:
+                cfg = panel.account(slug)
+                if cfg:
+                    db = Db(cfg.data_dir)
+                    try:
+                        db.mail_open(token)
+                    finally:
+                        db.close()
+            except Exception:
+                pass
+            self.send_response(200)
+            self.send_header("Content-Type", "image/gif")
+            self.send_header("Content-Length", str(len(self.GIF)))
+            self.send_header("Cache-Control", "no-store, max-age=0")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Referrer-Policy", "no-referrer")
+            self.end_headers()
+            self.wfile.write(self.GIF)
+
         def _css(self):
             try:
                 with open(os.path.join(STATIC_DIR, "panel.css"), "rb") as f:
@@ -753,6 +834,9 @@ def make_handler(panel: Panel):
             path = urllib.parse.urlparse(self.path).path
             if path == "/static/panel.css":
                 return self._css()
+            mp = re.fullmatch(r"/t/([a-z0-9-]{2,30})\.([A-Za-z0-9_-]{20,40})\.gif", path)
+            if mp:  # segnale di apertura di una mail: senza accesso, risponde sempre uguale (non rivela se il codice esiste)
+                return self._pixel(mp.group(1), mp.group(1) + "." + mp.group(2))
             s = panel.session(self._cookie())
             if path == "/login":
                 return self._send(200, self._login_page())
@@ -765,6 +849,8 @@ def make_handler(panel: Panel):
                 return self._send(200, panel._wizard_form(s, "start", "", f'<input type="hidden" name="csrf" value="{H(s["csrf"])}">', panel._head))
             if path == "/system":
                 return self._send(200, panel.system_page(s))
+            if path == "/posta":
+                return self._send(200, panel.posta_page(s))
             parts = path.strip("/").split("/")
             if len(parts) >= 3 and parts[0] == "account" and parts[2] in ("estensioni", "lezioni", "catalogo", "esperti", "biblioteca", "archivio"):
                 from . import panel_ext
@@ -831,6 +917,12 @@ def make_handler(panel: Panel):
                 return self._redirect("/login", {"Set-Cookie": "edith_sid=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0"})
             if path == "/accounts/new":
                 return self._send(200, panel.wizard(s, form))
+            if path == "/posta/salva":
+                err = panel.do_posta_save(form)
+                return self._send(200, panel.posta_page(s, "" if err else "Salvato. Se hai cambiato la password o il server, fai la prova qui sotto.", err))
+            if path == "/posta/prova":
+                msg, err = panel.do_posta_test(form)
+                return self._send(200, panel.posta_page(s, msg, err))
             if path == "/system/restart":
                 ok = bool(panel.control and panel.control.restart_all())
                 return self._send(200, panel.system_page(s, "Riavvio richiesto per tutti gli account: ci vogliono fino a 30 secondi." if ok else "", "" if ok else "Non posso riavviare da qui."))

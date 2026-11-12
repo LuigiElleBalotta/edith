@@ -13,6 +13,7 @@ KINDS = {
     "bozza_candidatura": "Bozza di candidatura / messaggio professionale",
     "idea_contenuto": "Idea di contenuto",
     "modifica_kb": "Modifica all'archivio",
+    "invio_mail": "Invio di una mail",
     "modifica_profilo": "Nuova regola per il manager",
     "nuova_estensione": "Nuova estensione",
     "modifica_estensione": "Modifica a un'estensione",
