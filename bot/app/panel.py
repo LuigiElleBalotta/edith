@@ -72,18 +72,26 @@ def field(label, name, value="", help="", kind="text", required=False):
             f'<input class="{INPUT} mt-1" type="{kind}" name="{name}" value="{H(value)}"{ac}{r}></div>')
 
 
+def choice(label, name, options, value="", help=""):
+    """Menu a tendina: options = [(valore, testo)]."""
+    h = f'<p class="{HELP}">{help}</p>' if help else ""
+    opts = "".join(f'<option value="{H(v)}"{" selected" if v == value else ""}>{H(t)}</option>' for v, t in options)
+    return (f'<div class="mt-4"><label class="block font-medium">{label}</label>{h}'
+            f'<select class="{INPUT} mt-1" name="{name}">{opts}</select></div>')
+
+
 def area(label, name, value="", help="", rows=4):
     h = f'<p class="{HELP}">{help}</p>' if help else ""
     return (f'<div class="mt-4"><label class="block font-medium">{label}</label>{h}'
             f'<textarea class="{INPUT} mt-1" name="{name}" rows="{rows}">{H(value)}</textarea></div>')
 
 
-def card(title, desc, inner, ident="", tone=""):
+def card(title, desc, inner, ident="", tone="", cls=""):
     ring = "border-red-200 dark:border-red-900" if tone == "danger" else "border-slate-200 dark:border-slate-700"
     i = f' id="{ident}"' if ident else ""
     d = f'<p class="mt-1 text-slate-600 dark:text-slate-300">{desc}</p>' if desc else ""
     t = f'<h2 class="text-lg font-semibold">{title}</h2>' if title else ""
-    return f'<section{i} class="mt-6 scroll-mt-4 rounded-2xl border {ring} bg-white p-5 shadow-sm dark:bg-slate-800">{t}{d}{inner}</section>'
+    return f'<section{i} class="mt-6 scroll-mt-4 rounded-2xl border {ring} bg-white p-5 shadow-sm dark:bg-slate-800 {cls}">{t}{d}{inner}</section>'
 
 
 def flash(msg="", err=""):
@@ -107,15 +115,15 @@ def _logo() -> str:
 def page(title: str, body: str, csrf: str = "", logged: bool = True) -> str:
     nav = ""
     if logged:
-        nav = ('<header class="border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"><div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">'
+        nav = ('<header class="border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"><div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-6">'
                '<a href="/" class="e-brand">' + _logo() + '<span><b>E.D.I.T.H.</b><small>Manager social</small></span></a>'
-               '<span class="e-online"><i class="e-led e-led-on"></i>sistemi in linea</span>'
+               '<nav class="e-topnav"><a href="/">Account</a><a href="/system">Stato</a></nav><span class="e-online"><i class="e-led e-led-on"></i>sistemi in linea</span>'
                f'<form method="post" action="/logout"><input type="hidden" name="csrf" value="{H(csrf)}">'
                '<button class="text-sm text-slate-600 underline hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">Esci</button></form></div></header>')
     return ('<!doctype html><html lang="it" class="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#050b17">'
             f'<title>{H(title)} · EDITH</title><link rel="stylesheet" href="/static/panel.css"></head>'
             '<body class="min-h-screen bg-slate-50 text-base leading-relaxed text-slate-900 antialiased dark:bg-slate-900 dark:text-slate-100">'
-            f'{nav}<main class="mx-auto max-w-3xl px-4 pb-10 pt-6">{body}</main>'
+            f'{nav}<main class="e-main{"" if logged else " e-narrow"}">{body}</main>'
             '<footer class="e-foot">E.D.I.T.H. &middot; Even Dead, I&rsquo;m The Hero</footer></body></html>')
 
 
@@ -160,6 +168,8 @@ def save_profile(path: str, form: dict) -> None:
         data = {}
     for k in ("proprietario", "ambito", "identita", "benvenuto"):
         data[k] = (form.get(k) or "").strip()
+    data["voce"] = form.get("voce") if form.get("voce") in ("edith", "neutra", "personalizzata") else "edith"
+    data["voce_testo"] = (form.get("voce_testo") or "").strip()[:800]
     data["regole_extra"] = [r.strip() for r in (form.get("regole_extra") or "").replace("\r", "").split("\n") if r.strip()]
     for k in ("strumenti_spenti", "lavori_spenti"):
         data[k] = [x.strip() for x in (form.get(k) or "").split(",") if x.strip()]
@@ -343,7 +353,7 @@ class Panel:
         actions = ('<div class="mt-6 flex flex-wrap gap-3">' + link("+ Nuovo account", "/accounts/new") + link("Stato e registro", "/system", "ghost") + "</div>"
                    f'<p class="{HELP}">«Nuovo account» ti guida in 5 passi (circa 5 minuti). «Stato e registro» mostra cosa sta facendo il programma.</p>')
         titolo = '<h2 class="e-section-title">I tuoi moduli</h2><p class="mt-1 text-slate-600 dark:text-slate-300">Ogni account è un manager social che ti scrive su Telegram. Aprine uno per cambiare come parla, chi può usarlo e le chiavi che usa.</p>'
-        return page("Account", hero + tiles + bad + actions + titolo + cards, s["csrf"])
+        return page("Account", hero + tiles + bad + actions + titolo + (f'<div class="e-modules">{cards}</div>' if cfgs else cards), s["csrf"])
 
     def account_page(self, s, cfg, msg: str = "", err: str = "") -> str:
         p = self._profile(cfg)
@@ -354,26 +364,29 @@ class Panel:
         a = f"/account/{H(cfg.slug)}"
         sezioni = (("personalita", "Personalità"), ("proprietari", "Chi può usarlo"), ("collegamenti", "Chiavi e collegamenti"), ("gestione", "Gestione"))
         bot = ("Bot Telegram: @" + H(st["bot"])) if st["bot"] else "Bot non ancora avviato"
+        voci = "".join(f'<a href="#{i}">{t}</a>' for i, t in sezioni)
         top = ('<a href="/" class="text-sm text-indigo-600 hover:underline dark:text-indigo-400">← Tutti gli account</a>'
                f'<div class="mt-2 flex items-center gap-3"><h1 class="text-2xl font-bold">{H(cfg.slug)}</h1>{pill("attivo", "ok") if on else pill("fermo", "no")}</div>'
-               f'<p class="mt-1 text-slate-600 dark:text-slate-300">{bot}</p>'
-               '<nav class="mt-4 flex flex-wrap gap-2 text-sm">'
-               + "".join(f'<a href="#{i}" class="rounded-full border border-slate-300 px-3 py-1 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800">{t}</a>' for i, t in sezioni) + "</nav>"
-               + self._ext_links(cfg))
+               f'<p class="mt-1 text-slate-600 dark:text-slate-300">{bot}</p>')
+        side = (f'<aside class="e-side"><p class="e-side-title">Impostazioni</p><nav>{voci}</nav>'
+                f'<p class="e-side-title">Strumenti</p>{self._ext_links(cfg)}</aside>')
         personalita = card("Personalità", "Come parla il manager e cosa conta per questo account. <b>Le modifiche valgono subito</b>, senza riavviare.",
-            f'<form method="post" action="{a}/profile">{csrf}'
+            f'<form method="post" action="{a}/profile" class="e-form2">{csrf}'
             + field("Come ti chiama il manager", "proprietario", p.get("proprietario", ""), "Il nome con cui si rivolge a te. Esempio: <i>Marta</i>.")
+            + choice("Come parla", "voce", [("edith", "Come E.D.I.T.H. (predefinita): vivace, sicura, un po' sfacciata"), ("neutra", "Neutra: semplice e sobria"), ("personalizzata", "La descrivo io")],
+                     p.get("voce") or "edith", "Il tono con cui il manager ti scrive. Le regole di sicurezza e l'onestà valgono sempre, qualunque voce scelga.")
+            + area("Descrizione della voce (solo se scegli «La descrivo io»)", "voce_testo", p.get("voce_testo", ""), "Esempio: <i>Parla con calma, da buon amico, senza battute.</i>", 2)
             + area("Chi è il manager e per chi lavora", "identita", p.get("identita", ""), "Una descrizione libera. Se la scrivi, sostituisce la presentazione di base; le regole di sicurezza restano sempre. Esempio: <i>Sei il manager social di una band indie di Milano…</i>")
             + area("Regole in più", "regole_extra", chr(10).join(p.get("regole_extra") or []), "Una regola per riga. Esempio: <i>Non proporre mai collaborazioni a pagamento.</i>")
             + field("Cosa conta come pertinente", "ambito", p.get("ambito", ""), "Serve a scegliere cosa tenere quando riceve contenuti. Vuoto = musica. Esempio: <i>cucina e ricette</i>.")
             + field("Frase di benvenuto", "benvenuto", p.get("benvenuto", ""), "Quello che il bot risponde quando scrivi /start.")
             + field("Strumenti da spegnere", "strumenti_spenti", ", ".join(p.get("strumenti_spenti") or []), "Nomi separati da virgola. Vuoto = tutti attivi. Esempio: <i>web_browser, grafico</i>.")
             + field("Lavori automatici da spegnere", "lavori_spenti", ", ".join(p.get("lavori_spenti") or []), "Compiti che il manager fa da solo (report, promemoria…). Vuoto = tutti attivi.")
-            + f'<div class="mt-5">{btn("Salva (vale subito)")}</div></form>', "personalita")
+            + f'<div class="e-actions mt-5">{btn("Salva (vale subito)")}</div></form>', "personalita", "", "e-span")
         proprietari = card("Chi può usarlo", "Solo gli utenti Telegram elencati qui possono parlare con questo bot. Gli altri vengono ignorati.",
             f'<form method="post" action="{a}/owners">{csrf}'
             + field("ID Telegram", "owners", ids, "Numeri separati da virgola. Per scoprire il tuo ID scrivi a <b>@userinfobot</b> su Telegram. Esempio: <i>123456789, 987654321</i>.")
-            + f'<div class="mt-5">{btn("Salva e riavvia")}</div></form>', "proprietari")
+            + f'<div class="e-actions mt-5">{btn("Salva e riavvia")}</div></form>', "proprietari")
         collegamenti = card("Chiavi e collegamenti",
             "Le chiavi si scrivono ma <b>non si mostrano mai</b>, nemmeno a te. Lascia il campo vuoto per non cambiarle: ogni valore nuovo viene controllato prima di essere salvato.",
             f'<p class="mt-4">Instagram: {pill("collegato", "ok") if cfg.ig_token else pill("non collegato")} &nbsp; Chiave IA: {pill("propria", "ok") if self._own_ai(cfg) else pill("quella comune del server")}</p>'
@@ -381,7 +394,7 @@ class Panel:
             + field("Nuovo token Instagram", "ig_token", "", "Si ottiene da Meta (guida: docs/INSTAGRAM.md). Solo lettura.", "password")
             + field("ID account Instagram", "ig_user_id", cfg.ig_user_id, "Un numero lungo, non il nome utente.")
             + field("Nuova chiave IA propria", "ai_key", "", "Solo se questo account deve usare una chiave diversa da quella comune.", "password")
-            + f'<div class="mt-5">{btn("Controlla e salva")}</div></form>', "collegamenti")
+            + f'<div class="e-actions mt-5">{btn("Controlla e salva")}</div></form>', "collegamenti")
         gestione = card("Gestione", "Controllare che tutto funzioni, oppure riavviare.",
             f'<div class="mt-4 flex flex-wrap gap-3"><form method="post" action="{a}/check">{csrf}{btn("Verifica i collegamenti", "ghost")}</form>'
             f'<form method="post" action="{a}/restart">{csrf}{btn("Riavvia questo account", "ghost")}</form></div>'
@@ -389,16 +402,16 @@ class Panel:
         pericolo = card("Metti da parte", "Il bot si ferma e l'account sparisce da questa lista. <b>I dati non vengono cancellati</b>: restano sul server e si possono recuperare.",
             f'<form method="post" action="{a}/remove">{csrf}<label class="mt-4 flex items-start gap-2"><input type="checkbox" name="conferma" value="si" class="mt-1.5">'
             f'<span>Sì, voglio mettere da parte «{H(cfg.slug)}»</span></label><div class="mt-4">{btn("Metti da parte", "danger")}</div></form>', "", "danger")
-        return page(cfg.slug, top + flash(msg, err) + personalita + proprietari + collegamenti + gestione + pericolo, s["csrf"])
+        return page(cfg.slug, top + flash(msg, err) + f'<div class="e-split">{side}<div class="e-content">{personalita}{proprietari}{collegamenti}{gestione}{pericolo}</div></div>', s["csrf"])
 
     def _ext_links(self, cfg) -> str:
         """Collegamenti alle estensioni, a «Cosa ha imparato» e al catalogo, con il numero di proposte da approvare."""
         from . import panel_ext
         n = panel_ext.pending_count(self, cfg)
         a = f"/account/{H(cfg.slug)}"
-        cls = "rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1 font-medium text-indigo-800 hover:bg-indigo-100 dark:border-indigo-700 dark:bg-indigo-950 dark:text-indigo-200"
+        cls = "e-navlink"
         badge = f' <span class="rounded-full bg-red-600 px-2 text-xs text-white">{n}</span>' if n else ""
-        return (f'<nav class="mt-3 flex flex-wrap gap-2 text-sm"><a class="{cls}" href="{a}/estensioni">Estensioni{badge}</a>'
+        return (f'<nav><a class="{cls}" href="{a}/estensioni">Estensioni{badge}</a>'
                 f'<a class="{cls}" href="{a}/lezioni">Cosa ha imparato</a><a class="{cls}" href="{a}/archivio">Archivio</a><a class="{cls}" href="{a}/biblioteca">Biblioteca</a><a class="{cls}" href="{a}/esperti">Esperti</a><a class="{cls}" href="{a}/catalogo">Catalogo</a></nav>')
 
     def check_page(self, s, cfg) -> str:

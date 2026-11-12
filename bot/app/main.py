@@ -188,6 +188,15 @@ AIUTO_IMPARA = ("Posso studiare un documento e ricordarmelo. Mandami un PDF (o u
 TIPI_IMPARABILI = (".pdf", ".docx", ".pptx", ".txt", ".md", ".markdown")
 
 
+def _benvenuto_predefinito(db) -> str:
+    """Frase di /start quando l'account non ne ha una sua: nello stile di E.D.I.T.H. (salvo voce «neutra»)."""
+    from . import profile as _prof
+    p = _prof.load(getattr(db, "profile_dir", "") or os.path.dirname(db.path))
+    if (p.get("voce") or "").strip().lower() in ("neutra", "personalizzata"):
+        return "Ciao! Sono il tuo manager social digitale."
+    return "Ciao! Sono E.D.I.T.H., la tua manager social. ✨ Sistemi in linea, visore calibrato: dimmi cosa facciamo e ci metto subito mano."
+
+
 def handle_impara(tg: Tg, db: Db, cfg, msg, text: str) -> str:
     """/impara con un documento in allegato (didascalia) oppure /impara <link>. Il documento viene letto e messo in biblioteca;
     lo studio parte da solo in background (ciclo principale)."""
@@ -285,7 +294,7 @@ def handle_command(cmd: str, db: Db) -> str:
         from . import profile as _prof
         ben = (_prof.load(getattr(db, "profile_dir", "") or os.path.dirname(db.path)).get("benvenuto") or "").strip()
         if c == "/start":
-            return (ben or "Ciao! Sono il tuo manager social digitale.") + "\n\n" + AIUTO
+            return (ben or _benvenuto_predefinito(db)) + "\n\n" + AIUTO
         return AIUTO
     if c == "/contatti":
         return contatti_text(db)

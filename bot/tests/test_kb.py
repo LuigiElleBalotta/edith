@@ -167,6 +167,25 @@ class KbTests(unittest.TestCase):
         self.assertNotIn("web_cerca", spenti)
         self.assertEqual(Tools(self.db, kb=KnowledgeBase(self.tmp.name + "/x", repo="")).run("kb_novita", {}), "Errore: archivio non configurato per questo account")
 
+    def test_voce_edith_predefinita_neutra_e_personalizzata(self):
+        d = os.path.dirname(self.db.path)
+        mk = lambda: Agent(None, Cfg(), self.db, Tools(self.db)).system()
+        s = mk()
+        self.assertIn("E.D.I.T.H.", s)  # senza altro: parla come lei
+        self.assertIn("Regole ferree", s)
+        self.assertLess(s.index("Regole ferree"), s.index("La tua VOCE"))  # lo stile viene DOPO le regole: non le scavalca
+        self.assertIn("valgono più del personaggio", s)
+        json.dump({"voce": "neutra"}, open(os.path.join(d, "profile.json"), "w", encoding="utf-8"))
+        self.assertNotIn("La tua VOCE", mk())
+        json.dump({"voce": "personalizzata", "voce_testo": "Parla con calma, da buon amico."}, open(os.path.join(d, "profile.json"), "w", encoding="utf-8"))
+        s = mk()
+        self.assertIn("Parla con calma, da buon amico.", s)
+        self.assertNotIn("E.D.I.T.H.", s)
+        json.dump({"voce": "personalizzata", "voce_testo": ""}, open(os.path.join(d, "profile.json"), "w", encoding="utf-8"))
+        self.assertNotIn("La tua VOCE", mk())  # personalizzata ma vuota: nessuno stile inventato
+        json.dump({"voce": "boh"}, open(os.path.join(d, "profile.json"), "w", encoding="utf-8"))
+        self.assertIn("E.D.I.T.H.", mk())  # valore sconosciuto: si torna al predefinito
+
     def test_profilo_identita_regole_e_lavori(self):
         from app import profile as prof
         from app.scheduler import JOBS, jobs_for
@@ -310,7 +329,9 @@ class GruppoTests(unittest.TestCase):
     def test_start_personalizzato_dal_profilo(self):
         import json as _j
         from app.main import handle_command
-        self.assertTrue(handle_command("/start", self.db).startswith("Ciao! Sono il tuo manager social"))
+        self.assertTrue(handle_command("/start", self.db).startswith("Ciao! Sono E.D.I.T.H."))  # predefinito: lo stile di E.D.I.T.H.
+        _j.dump({"voce": "neutra"}, open(os.path.join(self.tmp.name, "profile.json"), "w", encoding="utf-8"))
+        self.assertTrue(handle_command("/start", self.db).startswith("Ciao! Sono il tuo manager social"))  # voce neutra: tono semplice
         _j.dump({"benvenuto": "Ciao band! Sono il manager social della Band Test."}, open(os.path.join(self.tmp.name, "profile.json"), "w", encoding="utf-8"))
         self.assertTrue(handle_command("/start", self.db).startswith("Ciao band!"))
 

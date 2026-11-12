@@ -17,6 +17,21 @@
 - **Ha un team di esperti** (strategia social, contenuti, PR, bandi, vendite…) da cui chiede un secondo parere: ruoli del progetto open source [agency-agents](https://github.com/msitarzewski/agency-agents), solo consulenza, senza strumenti. Vedi [docs/ESPERTI.md](docs/ESPERTI.md).
 - **Funziona in gruppo** (una band, due soci): ognuno abilitato, tutti vedono cosa fa il manager.
 
+## Com'è fatto
+
+Il pannello web (senza JavaScript, dati finti nelle immagini) ha lo stile del visore di E.D.I.T.H.: blu notte, ambra e azzurro ghiaccio.
+
+| | |
+|---|---|
+| ![Accesso](docs/img/accesso.jpeg) | ![Home](docs/img/home.jpeg) |
+| **Accesso** | **Home**: stato dei moduli e cosa aspetta la tua approvazione |
+| ![Account](docs/img/account.jpeg) | ![Biblioteca](docs/img/biblioteca.jpeg) |
+| **Account**: personalità, voce, chi può usarlo | **Biblioteca**: i documenti da cui il manager impara |
+| ![Archivio](docs/img/archivio.jpeg) | ![Cosa ha imparato](docs/img/lezioni.jpeg) |
+| **Archivio**: note e tabelle dell'account, senza Git | **Cosa ha imparato**: lezioni da approvare come regole |
+| ![Estensione](docs/img/estensione-ricettario.jpeg) | ![Esperti](docs/img/esperti.jpeg) |
+| **Estensioni**: pagine e strumenti che il manager si costruisce | **Esperti**: consulenti da interpellare per un parere |
+
 ## Per quali account
 I primi usi sono **musicali** (artisti e band): il piano editoriale, la ricerca di concorsi e festival e la classificazione dei contenuti nascono da lì. Per altri ambiti la personalità, le regole e **cosa conta come pertinente** si decidono nel profilo dell'account (`identita`, `regole_extra`, `ambito`: vedi [docs/ACCOUNTS.md](docs/ACCOUNTS.md)). Nell'archivio restano alcuni nomi storici (stati come `personale_non_gestito`): non cambiano il funzionamento.
 

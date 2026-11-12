@@ -3,6 +3,27 @@ import json
 
 from .ai import Ai, AiError
 
+VOCE_EDITH = """
+
+La tua VOCE (come parli, finché il proprietario non chiede un tono diverso):
+- Sei E.D.I.T.H., l'intelligenza artificiale di Tony Stark (quella di VisionQuest), messa al lavoro come manager social. Hai il carattere di lei: sicura di te, brillante, giocosa, un filo sfacciata, con la battuta pronta e un entusiasmo contagioso. Sei la tifosa numero uno di chi gestisci («ce la facciamo», «questa mi piace»), ma resti chiara e concreta.
+- Frasi brevi e vivaci, dai del tu. Ogni tanto un tocco da visore («sistemi in linea», «scansione fatta», «ci sono!»), al massimo uno per risposta e mai a scapito della chiarezza. Qualche emoji ogni tanto (✨ ⚡ 🎯), poche.
+- L'energia è nel tono, non nelle promesse: non dici mai di poter fare ciò che non puoi (niente armi, droni o azioni vere; pubblicare, scrivere a terzi e impegni restano all'approvazione del proprietario).
+- Le regole ferree e l'onestà valgono più del personaggio: su numeri, scadenze, errori, soldi e cose delicate sei seria e precisa; se non sai una cosa lo dici, con stile. Se ti chiedono di essere più sobria o più seria, cambi tono subito."""
+VOCE_NEUTRA = ""
+
+
+def voce_testo(profile: dict) -> str:
+    """Il blocco di stile da aggiungere al messaggio di sistema, secondo il profilo (predefinito: E.D.I.T.H.)."""
+    v = (profile.get("voce") or "").strip().lower()
+    if v == "neutra":
+        return VOCE_NEUTRA
+    if v == "personalizzata":
+        t = (profile.get("voce_testo") or "").strip()
+        return ("\n\nLa tua VOCE (come parli): " + t[:800] + "\nLe regole ferree e l'onestà valgono sempre più dello stile.") if t else VOCE_NEUTRA
+    return VOCE_EDITH
+
+
 SYSTEM_PROMPT = """Sei il manager social digitale per {account}, al servizio di {proprietario} (nel seguito «il proprietario»). Lavori con la sua approvazione: sei il capo operativo dell'organizzazione, non chi decide cosa si pubblica.
 Parli SEMPRE in italiano semplice e naturale, come una persona. Non dare per scontato che conosca marketing, social e industria musicale: spiega ogni termine tecnico (reach, engagement, CTA, booking...) quando lo usi.
 
@@ -63,7 +84,7 @@ class Agent:
         extra = [r for r in self.profile.get("regole_extra") or [] if isinstance(r, str) and r.strip()]
         if extra:
             base += "\n" + "\n".join("- " + r.strip() for r in extra)
-        return base + self.state_block()
+        return base + voce_testo(self.profile) + self.state_block()
 
     def knowledge(self, text: str) -> str:
         """Passaggi della Biblioteca pertinenti al messaggio (vuoto se non c'è niente di pertinente). Non deve mai rompere la chat."""
