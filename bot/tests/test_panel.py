@@ -72,6 +72,26 @@ class Client:
     def post(self, path, form, **kw):
         return self.req("POST", path, {"csrf": self.csrf, **form}, **kw)
 
+    def upload(self, path, fields, files, csrf=True, host=None):
+        """Modulo con file allegato (multipart)."""
+        conf = "----prova1234"
+        nl = chr(13) + chr(10)
+        corpo = b""
+        for k, v in ({"csrf": self.csrf, **fields} if csrf else fields).items():
+            corpo += (f"--{conf}{nl}Content-Disposition: form-data; name=\"{k}\"{nl}{nl}{v}{nl}").encode()
+        for k, (nome, dati) in files.items():
+            corpo += (f"--{conf}{nl}Content-Disposition: form-data; name=\"{k}\"; filename=\"{nome}\"{nl}Content-Type: application/octet-stream{nl}{nl}").encode() + dati + nl.encode()
+        corpo += f"--{conf}--{nl}".encode()
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=15)
+        h = {"Host": host or self.host, "Content-Type": f"multipart/form-data; boundary={conf}"}
+        if self.cookie:
+            h["Cookie"] = self.cookie
+        c.request("POST", path, corpo, h)
+        r = c.getresponse()
+        data = r.read().decode()
+        c.close()
+        return r.status, data, r
+
 
 class PanelTests(unittest.TestCase):
     def setUp(self):
@@ -301,6 +321,81 @@ class PanelTests(unittest.TestCase):
         self.assertEqual(d["kb"]["repo"], "git@x:y.git")  # il resto del profilo non si tocca
         self.assertIn("acceso", self.c.post("/account/alfa/esperti/grant_writer/accendi", {})[1])
         self.assertEqual(self.c.post("/account/alfa/esperti/non_esiste/spegni", {})[0], 404)
+
+    # ---- biblioteca ----
+    TESTO_CORSO = ("Le storie" + chr(10) * 2 + "Le storie di Instagram durano 24 ore e servono a restare vicino alla community. "
+                   "Usa gli adesivi con le domande per aumentare la copertura delle storie e i messaggi diretti. " * 2)
+
+    def test_biblioteca_testo_link_e_file(self):
+        self.make_account()
+        from app.tools import ToolError
+
+        def finta_fetch(url):  # come la lettura vera: gli indirizzi non pubblici si bloccano
+            if "127.0.0.1" in url:
+                raise ToolError("indirizzo non pubblico: bloccato")
+            return "Una guida sul booking dei locali e dei festival per band emergenti. " * 4
+        self.p.lib_fetch = finta_fetch
+        self.p.lib_extract = lambda data: [(1, "Pagina uno del corso sui reel e sui sottotitoli " * 5), (2, "Pagina due sulle storie e la copertura " * 5)]
+        self.assertEqual(self.c.login(), 303)
+        self.assertIn("Biblioteca", self.c.req("GET", "/account/alfa")[1])
+        st, body, _ = self.c.req("GET", "/account/alfa/biblioteca")
+        self.assertEqual(st, 200)
+        self.assertIn("Ancora nessun documento", body)
+        self.assertIn("/impara", body)
+        st, body, _ = self.c.post("/account/alfa/biblioteca/testo", {"titolo": "<script>alert(1)</script>", "testo": self.TESTO_CORSO})
+        self.assertIn("Letto", body)
+        self.assertNotIn("<script>alert", body)
+        self.assertIn("&lt;script&gt;", body)
+        st, body, _ = self.c.post("/account/alfa/biblioteca/link", {"url": "https://esempio.it/guida", "titolo": "Guida booking"})
+        self.assertIn("Guida booking", body)
+        st, body, _ = self.c.upload("/account/alfa/biblioteca/file", {"titolo": "Corso PDF"}, {"file": ("corso.pdf", b"%PDF-finto")})
+        self.assertEqual(st, 200)
+        self.assertIn("Corso PDF", body)
+        self.assertIn("2 pagine", body)
+        st, body, _ = self.c.upload("/account/alfa/biblioteca/file", {}, {"file": ("appunti.txt", self.TESTO_CORSO.encode())})
+        self.assertIn("appunti", body)
+        st, body, _ = self.c.upload("/account/alfa/biblioteca/file", {}, {"file": ("virus.exe", b"x" * 100)})
+        self.assertIn("non supportato", body)
+        st, body, _ = self.c.post("/account/alfa/biblioteca/link", {"url": "http://127.0.0.1/segreto"})
+        self.assertIn("Non posso aggiungerlo", body)
+        st, body, _ = self.c.post("/account/alfa/biblioteca/link", {"url": "https://esempio.it/guida", "titolo": "Guida booking"})
+        self.assertIn("era già in biblioteca", body)
+
+    def test_biblioteca_sicurezza_del_caricamento(self):
+        self.make_account()
+        self.assertEqual(self.c.upload("/account/alfa/biblioteca/file", {}, {"file": ("a.txt", b"x" * 100)}, csrf=False)[0], 303)  # senza accesso
+        self.assertEqual(self.c.login(), 303)
+        self.assertEqual(self.c.upload("/account/alfa/biblioteca/file", {}, {"file": ("a.txt", b"x" * 100)}, csrf=False)[0], 403)  # senza codice anti-CSRF
+        self.assertEqual(self.c.upload("/account/alfa/profile", {}, {"file": ("a.txt", b"x")})[0], 415)  # i file si accettano solo qui
+        self.assertEqual(self.c.upload("/login", {}, {"file": ("a.txt", b"x")})[0], 415)
+        self.assertEqual(self.c.upload("/account/alfa/biblioteca/file", {}, {"file": ("a.txt", b"x" * 100)}, host="evil.example.com")[0], 421)
+        vecchio = panel.MAX_UPLOAD
+        panel.MAX_UPLOAD = 2000
+        try:
+            self.assertEqual(self.c.upload("/account/alfa/biblioteca/file", {}, {"file": ("a.txt", b"x" * 5000)})[0], 413)
+        finally:
+            panel.MAX_UPLOAD = vecchio
+
+    def test_biblioteca_elimina_ristudia_e_isolamento(self):
+        self.make_account("alfa")
+        self.make_account("beta")
+        self.assertEqual(self.c.login(), 303)
+        self.c.post("/account/alfa/biblioteca/testo", {"titolo": "Corso storie", "testo": self.TESTO_CORSO})
+        self.assertNotIn("Corso storie", self.c.req("GET", "/account/beta/biblioteca")[1])  # ogni account ha la sua biblioteca
+        st, body, _ = self.c.post("/account/alfa/biblioteca/1/elimina_chiedi", {})
+        self.assertIn("Sì, elimina", body)
+        self.assertIn("Corso storie", self.c.req("GET", "/account/alfa/biblioteca")[1])  # ancora lì finché non conferma
+        db = self.adb()
+        db._x("UPDATE fonti SET stato='errore' WHERE id=1")
+        db.close()
+        self.assertIn("di nuovo", self.c.post("/account/alfa/biblioteca/1/ristudia", {})[1])
+        db = self.adb()
+        self.assertEqual(db._x("SELECT stato FROM fonti WHERE id=1").fetchone()[0], "nuova")
+        db.close()
+        self.assertIn("eliminato", self.c.post("/account/alfa/biblioteca/1/elimina", {})[1])
+        self.assertIn("Ancora nessun documento", self.c.req("GET", "/account/alfa/biblioteca")[1])
+        self.assertEqual(self.c.post("/account/alfa/biblioteca/99/elimina", {})[0], 404)
+        self.assertEqual(self.c.req("POST", "/account/alfa/biblioteca/1/elimina", {})[0], 403)
 
     # ---- accesso e difese ----
     def test_senza_login_non_si_vede_niente(self):

@@ -14,6 +14,7 @@ Ogni campo ha sotto una riga che spiega a cosa serve, con un esempio.
 
 - **Estensioni** (dentro ogni account): elenco, pagina di ciascuna con impostazioni e tabelle modificabili, «Da approvare» (le proposte del manager), spegni/accendi, versioni, «Esegui ora». Vedi [ESTENSIONI.md](ESTENSIONI.md).
 - **Cosa ha imparato**: le lezioni del manager e le sue proposte di regole; «Non riproporre più».
+- **Biblioteca**: carica un file (PDF, Word, PowerPoint, testo, fino a 25 MB), un link o un testo; vedi i documenti, lo stato dello studio, il riassunto; studia di nuovo o elimina. Vedi [BIBLIOTECA.md](BIBLIOTECA.md).
 - **Esperti**: accendi o spegni i consulenti che il manager può interpellare, per questo account. Vedi [ESPERTI.md](ESPERTI.md).
 - **Catalogo**: estensioni già pronte, da proporre a te stesso per l'approvazione.
 

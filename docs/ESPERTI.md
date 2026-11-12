@@ -9,6 +9,9 @@ EDITH da sola conosce il tuo account e i suoi strumenti. Gli **esperti** le dann
 
 Non lo fa a ogni risposta: solo quando serve un parere in più.
 
+## Anche nella Biblioteca
+I ruoli degli esperti sono indicizzati nella [Biblioteca](BIBLIOTECA.md): per i temi che coprono, la ricerca automatica li ritrova da sola (dopo i tuoi documenti e al massimo un pezzo per volta), oltre a poterli interpellare a richiesta. Se spegni un esperto, esce anche dalla ricerca.
+
 ## Cosa un esperto NON può fare
 - **Non agisce.** È una sola richiesta all'IA, **senza strumenti**: non pubblica, non scrive a nessuno, non compra, non apre programmi.
 - **Non vede il tuo account.** Riceve solo la domanda e il contesto che il manager gli passa, **dopo un filtro** che oscura token e chiavi.

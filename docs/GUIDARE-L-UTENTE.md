@@ -55,6 +55,9 @@ Pubblicare su Instagram, commentare, scrivere messaggi o candidature, comprare, 
 - Per provare senza rischi: dal pannello → account → *Catalogo* → «Timer di cottura» (non si collega a nessun sito).
 - Dettagli: [ESTENSIONI.md](ESTENSIONI.md).
 
+## La Biblioteca: come spiegarla
+Se l'utente ha un corso, una guida o degli appunti, può darglieli: da Telegram con `/impara` (file allegato con la didascalia) o dal pannello → *Biblioteca*. Spiega onestamente che il bot non «cambia», ma si costruisce una **memoria** che rilegge quando serve, citando la pagina; che i PDF di sole immagini non si leggono; e che i principi che ricava diventano regole **solo con il suo OK**. Ricordagli il diritto d'autore (uso proprio). Dettagli: [BIBLIOTECA.md](BIBLIOTECA.md).
+
 ## Gli esperti
 Il manager può chiedere un secondo parere a consulenti (social, PR, bandi…). Spiega all'utente che sono **solo consigli**: non vedono il suo account, non possono agire, e il manager li confronta coi dati veri. Dal pannello → account → *Esperti* si spengono quelli che non servono. Dettagli: [ESPERTI.md](ESPERTI.md).
 

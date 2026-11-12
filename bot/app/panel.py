@@ -29,6 +29,7 @@ from . import accounts, config as cfgmod, logbuf
 
 SESSION_SECONDS = 8 * 3600
 MAX_BODY = 64 * 1024
+MAX_UPLOAD = 26 * 1024 * 1024  # solo per il caricamento di documenti nella Biblioteca (25 MB di file + il resto del modulo)
 FAIL_LIMIT, FAIL_WINDOW = 5, 300
 H = html.escape
 
@@ -189,10 +190,11 @@ def system_info():
 
 class Panel:
     def __init__(self, password: str, accounts_dir: str, data_root: str, env: dict = None, control=None, checks: dict = None,
-                 allowed_hosts=None, ext_root: str = None, ext_ask=None, ext_fetch=None):
+                 allowed_hosts=None, ext_root: str = None, ext_ask=None, ext_fetch=None, lib_fetch=None, lib_extract=None):
         self.accounts_dir, self.data_root = accounts_dir, data_root
         self.ext_root = ext_root or (env or os.environ).get("EXTENSIONS_DIR", "/extensions")  # estensioni: FUORI dal contenitore
         self.ext_ask, self.ext_fetch = ext_ask, ext_fetch  # (solo per i test) IA e rete simulate
+        self.lib_fetch, self.lib_extract = lib_fetch, lib_extract  # (solo per i test) lettura di pagine web e di PDF simulata
         self.env = dict(os.environ if env is None else env)
         self.control = control
         self.checks = {"telegram": accounts.check_telegram, "owner": accounts.wait_owner, "ai": accounts.check_ai,
@@ -363,7 +365,7 @@ class Panel:
         cls = "rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1 font-medium text-indigo-800 hover:bg-indigo-100 dark:border-indigo-700 dark:bg-indigo-950 dark:text-indigo-200"
         badge = f' <span class="rounded-full bg-red-600 px-2 text-xs text-white">{n}</span>' if n else ""
         return (f'<nav class="mt-3 flex flex-wrap gap-2 text-sm"><a class="{cls}" href="{a}/estensioni">Estensioni{badge}</a>'
-                f'<a class="{cls}" href="{a}/lezioni">Cosa ha imparato</a><a class="{cls}" href="{a}/esperti">Esperti</a><a class="{cls}" href="{a}/catalogo">Catalogo</a></nav>')
+                f'<a class="{cls}" href="{a}/lezioni">Cosa ha imparato</a><a class="{cls}" href="{a}/biblioteca">Biblioteca</a><a class="{cls}" href="{a}/esperti">Esperti</a><a class="{cls}" href="{a}/catalogo">Catalogo</a></nav>')
 
     def check_page(self, s, cfg) -> str:
         res = ""
@@ -669,6 +671,25 @@ def make_handler(panel: Panel):
             q = urllib.parse.parse_qs(self.rfile.read(n).decode("utf-8", "replace"), keep_blank_values=True)
             return {k: v[0] for k, v in q.items()}
 
+        def _multipart(self, ctype: str):
+            """Modulo con file allegato (solo Biblioteca). Ritorna (campi, file) oppure None se è troppo grande."""
+            n = int(self.headers.get("Content-Length") or 0)
+            if n > MAX_UPLOAD:
+                return None
+            import email.parser
+            import email.policy
+            raw = self.rfile.read(n)
+            msg = email.parser.BytesParser(policy=email.policy.HTTP).parsebytes(b"Content-Type: " + ctype.encode() + b"\r\nMIME-Version: 1.0\r\n\r\n" + raw)
+            campi, files = {}, {}
+            for part in (msg.iter_parts() if msg.is_multipart() else []):
+                nome = part.get_param("name", header="content-disposition")
+                dati = part.get_payload(decode=True) or b""
+                if part.get_filename() is not None:
+                    files[nome] = (part.get_filename(), dati)
+                else:
+                    campi[nome] = dati.decode("utf-8", "replace")
+            return campi, files
+
         def _login_page(self, err=""):
             e = flash(err=err)
             form = ('<form method="post" action="/login">' + field("Password", "password", "", "È la riga PANEL_PASSWORD del file .env sul server.", "password", True)
@@ -696,7 +717,7 @@ def make_handler(panel: Panel):
             if path == "/system":
                 return self._send(200, panel.system_page(s))
             parts = path.strip("/").split("/")
-            if len(parts) >= 3 and parts[0] == "account" and parts[2] in ("estensioni", "lezioni", "catalogo", "esperti"):
+            if len(parts) >= 3 and parts[0] == "account" and parts[2] in ("estensioni", "lezioni", "catalogo", "esperti", "biblioteca"):
                 from . import panel_ext
                 cfg = panel.account(parts[1])
                 if not cfg:
@@ -712,7 +733,19 @@ def make_handler(panel: Panel):
             if not self._host_ok():
                 return self._send(421, "Indirizzo non ammesso")
             path = urllib.parse.urlparse(self.path).path
-            form = self._form()
+            files = {}
+            ctype = self.headers.get("Content-Type") or ""
+            if ctype.lower().startswith("multipart/form-data"):
+                if not re.fullmatch(r"/account/[a-z0-9-]+/biblioteca/file", path):
+                    return self._send(415, "Tipo di richiesta non ammesso")
+                if not panel.session(self._cookie()):  # niente lettura di file da chi non ha fatto l'accesso
+                    return self._redirect("/login")
+                parsed = self._multipart(ctype)
+                if parsed is None:
+                    return self._send(413, "File troppo grande (massimo 25 MB)")
+                form, files = parsed
+            else:
+                form = self._form()
             if form is None:
                 return self._send(413, "Richiesta troppo grande")
             ip = self.client_address[0]
@@ -739,12 +772,12 @@ def make_handler(panel: Panel):
                 ok = bool(panel.control and panel.control.restart_all())
                 return self._send(200, panel.system_page(s, "Riavvio richiesto per tutti gli account: ci vogliono fino a 30 secondi." if ok else "", "" if ok else "Non posso riavviare da qui."))
             parts = path.strip("/").split("/")
-            if len(parts) >= 4 and parts[0] == "account" and parts[2] in ("estensioni", "approvazione", "lezioni", "catalogo", "esperti"):
+            if len(parts) >= 4 and parts[0] == "account" and parts[2] in ("estensioni", "approvazione", "lezioni", "catalogo", "esperti", "biblioteca"):
                 from . import panel_ext
                 cfg = panel.account(parts[1])
                 if not cfg:
                     return self._send(404, page("Non trovato", "<h1>Account non trovato</h1>", s["csrf"]))
-                code, html_ = panel_ext.post(panel, s, cfg, parts[2:], form)
+                code, html_ = panel_ext.post(panel, s, cfg, parts[2:], form, files)
                 return self._send(code, html_)
             if len(parts) == 3 and parts[0] == "account":
                 cfg = panel.account(parts[1])

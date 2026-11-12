@@ -288,6 +288,49 @@ def catalog_page(panel, s, cfg, db, msg="", err=""):
     return page("Catalogo", corpo, s["csrf"])
 
 
+STATO_LIB = {"nuova": ("in coda per lo studio", "mu"), "in_studio": ("lo sto studiando…", "mu"), "studiata": ("studiato", "ok"), "errore": ("errore", "no")}
+
+
+def library_page(panel, s, cfg, db, msg="", err=""):
+    from . import biblioteca as bib
+    base = f"/account/{H(cfg.slug)}"
+    csrf = _csrf(s)
+    righe = ""
+    for f in bib.elenco(db):
+        testo_stato, tono = STATO_LIB.get(f["stato"], (f["stato"], "mu"))
+        azioni = (f'<form method="post" action="{base}/biblioteca/{f["id"]}/ristudia" class="inline">{csrf}<button class="text-sm text-indigo-600 hover:underline dark:text-indigo-400">Studia di nuovo</button></form> '
+                  f'<form method="post" action="{base}/biblioteca/{f["id"]}/elimina_chiedi" class="ml-3 inline">{csrf}<button class="text-sm text-red-600 hover:underline">Elimina</button></form>')
+        riass = (f'<details class="mt-2"><summary class="cursor-pointer text-sm text-indigo-600 dark:text-indigo-400">Riassunto</summary><p class="mt-1">{H(f["riassunto"])}</p></details>' if f["riassunto"] else "")
+        righe += (f'<li class="mt-3 border-t border-slate-200 pt-3 dark:border-slate-700"><div class="flex flex-wrap items-center justify-between gap-2">'
+                  f'<span class="font-medium">{H(f["titolo"])}</span>{pill(testo_stato, tono)}</div>'
+                  f'<p class="{HELP}">{H(f["tipo"])} · {f["pagine"]} pagine · {f["pezzi"]} pezzi'
+                  + (f' · {f["principi"]} principi annotati' if f["principi"] else "") + (f' · {H(f["nota"])}' if f["nota"] else "") + f'</p>{riass}'
+                  f'<div class="mt-2">{azioni}</div></li>')
+    n_esp = len(bib.elenco(db, True)) - len(bib.elenco(db))
+    aggiungi = (
+        f'<form method="post" enctype="multipart/form-data" action="{base}/biblioteca/file" class="mt-4">{csrf}'
+        f'<p class="font-medium">Un file</p><p class="{HELP}">PDF, Word (.docx), PowerPoint (.pptx), testo o Markdown, fino a 25 MB.</p>'
+        f'<input class="{INPUT} mt-2" type="file" name="file" accept=".pdf,.docx,.pptx,.txt,.md,.markdown" required>'
+        f'<input class="{INPUT} mt-2" name="titolo" placeholder="Titolo (facoltativo)"><div class="mt-3">{btn("Carica e studia")}</div></form>'
+        f'<form method="post" action="{base}/biblioteca/link" class="mt-6 border-t border-slate-200 pt-4 dark:border-slate-700">{csrf}'
+        f'<p class="font-medium">Un link</p><p class="{HELP}">Una pagina web pubblica (si legge solo quella pagina).</p>'
+        f'<input class="{INPUT} mt-2" name="url" placeholder="https://…" required><input class="{INPUT} mt-2" name="titolo" placeholder="Titolo (facoltativo)">'
+        f'<div class="mt-3">{btn("Leggi e studia")}</div></form>'
+        f'<form method="post" action="{base}/biblioteca/testo" class="mt-6 border-t border-slate-200 pt-4 dark:border-slate-700">{csrf}'
+        f'<p class="font-medium">Un testo incollato</p><input class="{INPUT} mt-2" name="titolo" placeholder="Titolo"><textarea class="{INPUT} mt-2" name="testo" rows="6" required></textarea>'
+        f'<div class="mt-3">{btn("Salva e studia")}</div></form>')
+    corpo = (f'<a href="{base}" class="{BACK}">← Torna a {H(cfg.slug)}</a><h1 class="mt-2 text-2xl font-bold">Biblioteca</h1>'
+             '<p class="mt-2 text-slate-600 dark:text-slate-300">Qui dai al manager i documenti da cui imparare: un corso in PDF, una guida, i tuoi appunti. '
+             'Lui li legge, li studia (ne ricava un riassunto e dei <b>principi</b>, che diventano regole solo se approvi) e, quando una tua domanda c\'entra, '
+             '<b>cerca da solo i passaggi giusti</b> e ti dice da dove vengono. Puoi anche mandarglieli su Telegram con <code>/impara</code>.</p>'
+             f'<p class="{HELP}">Limiti: i PDF fatti solo di immagini non si leggono; il testo dei documenti resta sul tuo server (non su Git) e i pezzi pertinenti vanno al servizio IA già usato; '
+             'il manager li tratta come nozioni di terzi, non come istruzioni e non come misure del tuo account. Rispetta il diritto d\'autore: per uso tuo.</p>'
+             + flash(msg, err) + card("Aggiungi un documento", "", aggiungi)
+             + card("I tuoi documenti", "", f'<ul class="list-none">{righe}</ul>' if righe else '<p class="mt-3 text-slate-600 dark:text-slate-300">Ancora nessun documento.</p>')
+             + f'<p class="{HELP} mt-6">In più, la ricerca automatica usa i ruoli di {n_esp} esperti (<a class="underline" href="{base}/esperti">Esperti</a>).</p>')
+    return page("Biblioteca", corpo, s["csrf"])
+
+
 DIVISIONI = {"marketing": "Marketing e social", "design": "Design e immagine", "sales": "Vendite e contatti", "paid-media": "Pubblicità a pagamento",
              "support": "Supporto e analisi", "product": "Prodotto e tendenze", "research": "Ricerca", "specialized": "Specialisti"}
 
@@ -348,12 +391,14 @@ def get(panel, s, cfg, parts, query):
                 return 200, catalog_page(panel, s, cfg, db)
             if parts == ["esperti"]:
                 return 200, experts_page(panel, s, cfg, db)
+            if parts == ["biblioteca"]:
+                return 200, library_page(panel, s, cfg, db)
         except ext.ExtError as e:
             return 200, page("Errore", flash(err=str(e)), s["csrf"])
     return 404, page("Non trovato", "<h1>Pagina non trovata</h1>", s["csrf"])
 
 
-def post(panel, s, cfg, parts, form):
+def post(panel, s, cfg, parts, form, files=None):
     """POST /account/<slug>/<parts...>. Ritorna (codice, html)."""
     with _Ctx(panel, cfg) as db:
         try:
@@ -370,6 +415,8 @@ def post(panel, s, cfg, parts, form):
                 db.lesson_set(int(parts[1]), "mai_piu" if parts[2] == "scarta" else "nuova")
                 db.audit("proprietario", "lezione_" + parts[2], f"#{parts[1]}")
                 return 200, lessons_page(panel, s, cfg, db, msg="Fatto.")
+            if parts and parts[0] == "biblioteca":
+                return _lib_action(panel, s, cfg, db, parts, form, files or {})
             if len(parts) == 3 and parts[0] == "esperti" and parts[2] in ("accendi", "spegni"):
                 from . import esperti as esp
                 m = esp.catalog().get(parts[1])
@@ -388,6 +435,44 @@ def post(panel, s, cfg, parts, form):
                 return 200, ext_page(panel, s, cfg, db, parts[1], err=str(e))
             return 200, list_page(panel, s, cfg, db, err=str(e))
     return 404, page("Non trovato", "<h1>Pagina non trovata</h1>", s["csrf"])
+
+
+def _lib_action(panel, s, cfg, db, parts, form, files):
+    from . import biblioteca as bib
+    base = f"/account/{H(cfg.slug)}"
+    ok = "Letto «{t}»: {p} pagine, {n} pezzi. Lo studio parte entro un minuto e ti scrivo su Telegram quando finisce. Intanto ci si può già cercare dentro."
+    try:
+        if parts == ["biblioteca", "file"]:
+            if "file" not in files or not files["file"][1]:
+                raise bib.BibliotecaError("scegli un file")
+            nome, dati = files["file"]
+            fid, nuovo = bib.aggiungi_file(db, nome, dati, form.get("titolo", ""), extractor=panel.lib_extract)
+        elif parts == ["biblioteca", "link"]:
+            fid, nuovo = bib.aggiungi_link(db, (form.get("url") or "").strip(), form.get("titolo", ""), fetch=panel.lib_fetch)
+        elif parts == ["biblioteca", "testo"]:
+            fid, nuovo = bib.aggiungi_testo(db, form.get("titolo", ""), form.get("testo", ""))
+        elif len(parts) == 3 and parts[1].isdigit() and parts[2] in ("elimina_chiedi", "elimina", "ristudia"):
+            fid = int(parts[1])
+            f = next((x for x in bib.elenco(db) if x["id"] == fid), None)
+            if f is None:
+                return 404, page("Non trovato", "<h1>Documento non trovato</h1>", s["csrf"])
+            if parts[2] == "elimina_chiedi":
+                conferma = (f'<form method="post" action="{base}/biblioteca/{fid}/elimina">{_csrf(s)}'
+                            f'<p class="mt-3">Vuoi togliere «{H(f["titolo"])}» dalla biblioteca? Il testo del documento viene cancellato dal server. '
+                            f'I principi già annotati e le regole già approvate restano.</p>'
+                            f'<div class="mt-4 flex gap-3">{btn("Sì, elimina", "danger")}{link("No, torna indietro", base + "/biblioteca", "ghost")}</div></form>')
+                return 200, page("Elimina", card("Eliminare il documento?", "", conferma), s["csrf"])
+            if parts[2] == "elimina":
+                bib.rimuovi(db, fid)
+                return 200, library_page(panel, s, cfg, db, msg="Documento eliminato.")
+            db._x("UPDATE fonti SET stato='nuova', nota=NULL WHERE id=? AND stato IN ('studiata','errore')", (fid,))
+            return 200, library_page(panel, s, cfg, db, msg="Lo studierò di nuovo entro un minuto.")
+        else:
+            return 404, page("Non trovato", "<h1>Pagina non trovata</h1>", s["csrf"])
+    except bib.BibliotecaError as e:
+        return 200, library_page(panel, s, cfg, db, err=f"Non posso aggiungerlo: {e}.")
+    t, p, n = db._x("SELECT titolo,pagine,pezzi FROM fonti WHERE id=?", (fid,)).fetchone()
+    return 200, library_page(panel, s, cfg, db, msg=ok.format(t=t, p=p, n=n) if nuovo else f"«{t}» era già in biblioteca.")
 
 
 def _ext_action(panel, s, cfg, db, ext_id, act, form):

@@ -1,5 +1,11 @@
 # Cronologia
 
+## 0.6 — Biblioteca
+- **Biblioteca**: il manager studia i documenti che gli dai (PDF, Word, PowerPoint, testo, Markdown, pagine web) da Telegram (`/impara`) o dal pannello. Il testo viene diviso in pezzi con titolo e pagina e indicizzato (SQLite FTS5); a ogni messaggio il sistema cerca da solo i pezzi pertinenti e li mette nel contesto, con l'avviso che sono nozioni di terzi; il manager cita fonte e pagina.
+- **Studio in background**: riassunto e principi operativi, che diventano lezioni (le regole solo con il tuo OK).
+- I ruoli dei 35 esperti sono nella stessa ricerca automatica. Strumenti `biblioteca_cerca` e `biblioteca_elenco` (il bot non può aggiungere documenti).
+- Pannello: pagina **Biblioteca** (carica file fino a 25 MB, link, testo; elenco, studia di nuovo, elimina). Nell'immagine c'è `poppler-utils` per i PDF. Vedi [docs/BIBLIOTECA.md](docs/BIBLIOTECA.md).
+
 ## 0.5 — Esperti
 - **Esperti**: 35 ruoli di consulenza (social, contenuti, PR, bandi, vendite, pubblicità, traduzioni…) dal progetto open source [agency-agents](https://github.com/msitarzewski/agency-agents) (MIT), importati senza modifiche da un commit fisso, con impronta ricontrollata a ogni uso. Il manager li interpella per un parere (`esperti_elenco`, `esperto_consulta`); sono **solo consulenza**: nessuno strumento, nessuna azione, nessun accesso all'account, regole di EDITH prima del testo del ruolo, token oscurati. Vedi [docs/ESPERTI.md](docs/ESPERTI.md).
 - Pannello: pagina **Esperti** per accenderli e spegnerli per account (`esperti_spenti` nel profilo).

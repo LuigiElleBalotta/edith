@@ -72,6 +72,14 @@ CREATE TABLE IF NOT EXISTS lezioni(
 CREATE TABLE IF NOT EXISTS ext_timers(
   id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, due REAL NOT NULL, ext TEXT NOT NULL,
   message TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'in_attesa', attempts INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS fonti(
+  id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, titolo TEXT NOT NULL, tipo TEXT NOT NULL, origine TEXT,
+  sha256 TEXT, pagine INTEGER NOT NULL DEFAULT 0, pezzi INTEGER NOT NULL DEFAULT 0, stato TEXT NOT NULL DEFAULT 'nuova',
+  riassunto TEXT, principi INTEGER NOT NULL DEFAULT 0, nota TEXT, chiave TEXT);
+CREATE TABLE IF NOT EXISTS pezzi(
+  id INTEGER PRIMARY KEY AUTOINCREMENT, fonte_id INTEGER NOT NULL, ordine INTEGER NOT NULL, pagina INTEGER NOT NULL DEFAULT 0,
+  titolo TEXT, testo TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS pezzi_fonte ON pezzi(fonte_id);
 CREATE TABLE IF NOT EXISTS watch_snap(
   username TEXT NOT NULL, day TEXT NOT NULL, followers INTEGER, media_count INTEGER, avg_likes REAL, avg_comments REAL,
   PRIMARY KEY(username, day));
@@ -97,6 +105,11 @@ class Db:
         self._c = sqlite3.connect(self.path, check_same_thread=False)
         self._c.execute("PRAGMA journal_mode=WAL")
         self._c.executescript(SCHEMA)
+        self.fts = True  # ricerca testuale della Biblioteca (SQLite FTS5); se manca si ripiega su una ricerca più semplice
+        try:
+            self._c.execute("CREATE VIRTUAL TABLE IF NOT EXISTS pezzi_fts USING fts5(testo, titolo, tokenize='unicode61 remove_diacritics 2')")
+        except sqlite3.OperationalError:
+            self.fts = False
         self._migrate()
         self._c.commit()
 

@@ -14,6 +14,7 @@ Campi (tutti facoltativi):
 - tastiera: tasti rapidi sotto la barra di scrittura, elenco di righe di comandi (es. [["/contatti", "/agenda"]]);
 - utenti: {"ID Telegram": "Nome"} per sapere chi parla quando il bot ha più proprietari;
 - lavori: lavori automatici propri dell'account {nome: {weekday|None, hour, minute, prompt, reason, deliver, cond}};
+- biblioteca_automatica: se true (predefinito) a ogni messaggio il manager cerca da solo nella Biblioteca i passaggi pertinenti;
 - esperti_spenti: id degli esperti (consulenti) da non interpellare per questo account;
 - riproponi_dopo_giorni: dopo quanti giorni il manager può riproporre una regola che hai rifiutato (predefinito 14);
 - kb: {repo, branch, write_branch} archivio di conoscenza (la chiave di accesso è nell'ambiente, mai qui).
@@ -21,7 +22,7 @@ Campi (tutti facoltativi):
 import json
 import os
 
-DEFAULTS = {"proprietario": "", "ambito": "", "identita": "", "regole_extra": [], "strumenti_spenti": [], "lavori_spenti": [], "lavori": {}, "kb": {}, "utenti": {}, "benvenuto": "", "tastiera": [], "riproponi_dopo_giorni": 14, "esperti_spenti": []}
+DEFAULTS = {"proprietario": "", "ambito": "", "identita": "", "regole_extra": [], "strumenti_spenti": [], "lavori_spenti": [], "lavori": {}, "kb": {}, "utenti": {}, "benvenuto": "", "tastiera": [], "riproponi_dopo_giorni": 14, "esperti_spenti": [], "biblioteca_automatica": True}
 
 
 def load(data_dir) -> dict:

@@ -29,6 +29,7 @@ COMANDI = [  # menu che compare quando scrivi "/" (solo funzioni già pronte)
     ("pausa", "Fermo ogni azione verso l'esterno"),
     ("riprendi", "Riparto dopo la pausa"),
     ("contatti", "Chi devo contattare e quando"),
+    ("impara", "Insegnami da un PDF, un testo o un link"),
     ("menu", "Mostra i tasti rapidi"),
     ("aiuto", "Cosa posso fare"),
 ]
@@ -44,6 +45,7 @@ AIUTO = (
     "/report - report della settimana (arriva da solo il lunedì)\n"
     "/cerca - cerco concorsi e bandi aperti (da solo il mercoledì)\n"
     "/contatti - chi contattare adesso e nei prossimi giorni\n"
+    "/impara - insegnami da un documento: mandami un PDF (o Word, PowerPoint, testo) con la didascalia /impara, oppure /impara e un link\n"
     "/menu - rimostra i tasti rapidi\n"
     "/pausa - fermo ogni azione verso l'esterno\n"
     "/riprendi - riparto\n"
@@ -177,6 +179,42 @@ def handle_media(tg: Tg, db: Db, cfg, msg) -> str:
     db.audit("proprietario", "media_salvato", f"{name} {len(data)}B sha={sha[:12]}")
     return (f"Ricevuto e salvato: {name} ({len(data) // 1024} KB), integrità controllata. "
             f"Lo elimino da solo dopo {cfg.retention_days} giorni se non serve più.")
+
+
+AIUTO_IMPARA = ("Posso studiare un documento e ricordarmelo. Mandami un PDF (o un file Word, PowerPoint, testo) scrivendo come didascalia "
+                "/impara e, se vuoi, un titolo (es. «/impara Corso Instagram»). Oppure scrivi /impara seguito da un link a una pagina web. "
+                "Lo leggo, lo studio in qualche minuto e poi, quando una tua domanda c'entra, cerco i passaggi giusti e ti dico da dove vengono. "
+                "Dal pannello, in «Biblioteca», puoi vedere e togliere i documenti. Limite: 20 MB da Telegram; i PDF fatti solo di immagini non si leggono.")
+TIPI_IMPARABILI = (".pdf", ".docx", ".pptx", ".txt", ".md", ".markdown")
+
+
+def handle_impara(tg: Tg, db: Db, cfg, msg, text: str) -> str:
+    """/impara con un documento in allegato (didascalia) oppure /impara <link>. Il documento viene letto e messo in biblioteca;
+    lo studio parte da solo in background (ciclo principale)."""
+    from . import biblioteca as bib
+    resto = text.split(None, 1)[1].strip() if len(text.split(None, 1)) > 1 else ""
+    try:
+        if "document" in msg:
+            obj = msg["document"]
+            nome = safe_name(obj.get("file_name") or "documento")
+            data, _ = tg.download(obj["file_id"], cfg.max_download_bytes)
+            if len(data) > cfg.max_download_bytes:
+                return "File troppo grande per il metodo attuale (massimo 20 MB)."
+            fid, nuovo = bib.aggiungi_file(db, nome, data, resto)
+        elif resto.split() and re.match(r"https?://\S+$", resto.split()[0]):
+            parti = resto.split(None, 1)
+            fid, nuovo = bib.aggiungi_link(db, parti[0], parti[1] if len(parti) > 1 else "")
+        else:
+            return AIUTO_IMPARA
+    except TgError:
+        return "Non riesco a scaricare questo file da Telegram (limite di 20 MB). Riprova con un file più piccolo o caricalo dal pannello."
+    except bib.BibliotecaError as e:
+        return f"Non posso impararlo: {e}."
+    titolo, pezzi, pagine = db._x("SELECT titolo,pezzi,pagine FROM fonti WHERE id=?", (fid,)).fetchone()
+    if not nuovo:
+        return f"«{titolo}» era già in biblioteca: non lo rileggo."
+    return (f"Ho letto «{titolo}»: {pagine} pagine, {pezzi} pezzi. Lo studio adesso (ci vogliono alcuni minuti) e ti scrivo quando ho finito. "
+            "Intanto posso già cercarci dentro.")
 
 
 def daily_import(db: Db, ig, agent) -> dict:
@@ -407,8 +445,14 @@ def process(tg: Tg, db: Db, agent: Agent, cfg, update) -> None:
         db.set("extra_allowed", ",".join(extra))
         tg.send(chat_id, msg_ok)
         return
+    if text.split()[:1] and text.split()[0].split("@")[0].lower() == "/impara":
+        tg.send(chat_id, handle_impara(tg, db, cfg, msg, text))
+        return
     if any(k in msg for k in MEDIA_KEYS):
-        tg.send(chat_id, handle_media(tg, db, cfg, msg))
+        risposta = handle_media(tg, db, cfg, msg)
+        if "document" in msg and os.path.splitext((msg["document"].get("file_name") or "").lower())[1] in TIPI_IMPARABILI and risposta.startswith("Ricevuto"):
+            risposta += "\n\nSe vuoi che lo STUDI (e me lo ricordi), rimandamelo con la didascalia /impara."
+        tg.send(chat_id, risposta)
         if not text:
             return
     cmd0 = text.split()[0].split("@")[0].lower() if text.startswith("/") else ""
@@ -536,6 +580,19 @@ def run_account(cfg, stop=None) -> int:
                   disabled=profilo.get("strumenti_spenti") or (), ext=runtime, consult=_consulta)
     agent = Agent(ai, cfg, db, tools)
     jobs = jobs_for(profilo)
+    from . import biblioteca as bib
+    bib.riprendi_studi(db)  # studi rimasti a metà prima di un riavvio: ripartono
+    try:
+        bib.sync_esperti(db)  # i ruoli degli esperti entrano nella ricerca automatica
+    except Exception as e:
+        db.audit("sistema", "biblioteca_esperti_errore", type(e).__name__)
+
+    def _studio_ask(istruzione, dati):  # una chiamata all'IA leggera, senza strumenti
+        return agent.background(istruzione, dati, max_tokens=1500)
+
+    def _notifica(testo):
+        tg.send(destinations(cfg, db)[0], testo)
+    max_lotti = int(os.environ.get("BIBLIOTECA_MAX_LOTTI", "80") or 80)
     try:
         db.set("bot_username", (tg.call("getMe") or {}).get("username", ""))
     except Exception:
@@ -581,6 +638,8 @@ def run_account(cfg, stop=None) -> int:
                 run_due_tasks(db, agent, tg, dest[0])
                 run_due_jobs(db, agent, tg, dest[0], jobs=jobs)
                 ext.run_schedules(db, tg, dest[0], runtime)
+                if not db.paused():
+                    bib.avvia_studio(db, _studio_ask, _notifica, max_lotti)
             except Exception as e:
                 db.audit("sistema", "scheduler_errore", type(e).__name__)
         try:  # timer delle estensioni: scattano entro pochi secondi (il ciclo gira a ogni messaggio o ogni 30 s)

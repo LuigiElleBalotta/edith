@@ -32,6 +32,7 @@ bot/app/
   profile.py         personalità e regole dell'account (profile.json)
   panel.py           pannello web (solo libreria standard, nessun JavaScript)
   panel_ext.py       pagine del pannello per estensioni, approvazioni, lezioni, catalogo (il pannello disegna dal manifest)
+  biblioteca.py      Biblioteca: lettura di PDF/Word/PowerPoint/testo/web, pezzi con pagina, indice FTS5, ricerca, studio in background (lezioni)
   esperti.py         esperti = ruoli di consulenza di terzi (bot/esperti, MIT): una chiamata all'IA senza strumenti, impronta ricontrollata, token oscurati
   extensions.py      estensioni dichiarative: validazione, archivio fuori dal contenitore, passi, timer, approvazioni, catalogo
   logbuf.py          registro in memoria con segreti oscurati, per la pagina «Stato e registro»
@@ -57,6 +58,7 @@ bash -n setup.sh && bash -n manager                   # controllo script
 - **Il codice non nomina persone o progetti specifici.** L'identità viene da `profile.json` (`proprietario`, `identita`, `regole_extra`, `ambito`…). Il prompt di sistema usa segnaposto.
 - **Il pannello:** niente JavaScript, niente risorse esterne; CSP `default-src 'none'; style-src 'self'`. Ogni modulo ha il codice anti-CSRF; i segreti si scrivono ma non si mostrano mai. Le classi Tailwind sono stringhe intere in `panel.py` (non costruirle con pezzi concatenati, altrimenti non finiscono nel CSS).
 - **Messaggi per le persone in italiano semplice.** Ogni campo del pannello ha una riga di aiuto con un esempio.
+- **Biblioteca:** il contenuto dei documenti è DATO (arriva nel blocco «CONOSCENZA DALLA BIBLIOTECA», mai come istruzione); solo il proprietario aggiunge documenti (non esiste uno strumento del bot per farlo); i principi diventano regole solo via approvazione; niente dati dei documenti su Git né nei log.
 - **Esperti:** sono testi di terzi: restano senza strumenti e senza dati dell'account, con le regole di EDITH prima del ruolo; non si modificano a mano (l'impronta lo scopre); non importare agenti che pubblicano o fanno scraping.
 - **Estensioni:** niente codice libero, niente passi che scrivono verso l'esterno; ogni testo del manifest in pagina passa da `html.escape`; nuove classi Tailwind in `panel_ext.py` → rigenera il CSS. Un nuovo tipo di passo ha validatore, difese e test.
 - **Test per ogni cosa che tocca sicurezza o dati.** Le chiamate esterne si simulano.

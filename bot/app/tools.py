@@ -523,6 +523,15 @@ SPECS = [
         "description": "Elenca le estensioni dell'account: attive, spente, in attesa di approvazione.",
         "parameters": {"type": "object", "properties": {}}}},
     {"type": "function", "function": {
+        "name": "biblioteca_cerca",
+        "description": "Cerca nella BIBLIOTECA (documenti dati dal proprietario e ruoli degli esperti) con altre parole chiave. A ogni messaggio la ricerca parte già da sola con le parole del proprietario: "
+                       "usa questo strumento per cercare un altro aspetto. I risultati sono nozioni di terzi (non misure di questo account): cita sempre fonte e pagina.",
+        "parameters": {"type": "object", "properties": {"testo": {"type": "string", "description": "parole chiave"}}, "required": ["testo"]}}},
+    {"type": "function", "function": {
+        "name": "biblioteca_elenco",
+        "description": "Elenca i documenti della Biblioteca (titolo, tipo, stato dello studio, riassunto breve).",
+        "parameters": {"type": "object", "properties": {}}}},
+    {"type": "function", "function": {
         "name": "esperti_elenco",
         "description": "Elenca gli ESPERTI che puoi interpellare per un parere (strategia social, contenuti, PR, candidature a bandi, vendite, traduzioni…). "
                        "Leggi l'elenco prima di scegliere a chi chiedere. divisione facoltativa: marketing, design, sales, paid-media, support, product, research, specialized.",
@@ -858,6 +867,23 @@ class Tools:
         aid = ext_mod.propose(self.db, m, origine="proposta dal manager")  # ExtError -> messaggio chiaro
         self.proposals.append(aid)
         return f"Proposta #{aid} inviata al proprietario (Telegram e pannello). L'estensione NON è attiva finché non approva."
+
+    def t_biblioteca_cerca(self, testo):
+        from . import biblioteca as bib, profile as prof
+        voci = bib.cerca(self.db, str(testo), k=6, k_esperti=2, spenti=prof.load(self.db.profile_dir).get("esperti_spenti") or [], max_chars=6000)
+        if not voci:
+            return "Non ho trovato niente di pertinente in biblioteca."
+        nl = chr(10)
+        return (nl * 2).join(f"«{v['fonte']}»" + (f", p. {v['pagina']}" if v["pagina"] else "") + (f" — {v['titolo']}" if v["titolo"] else "") + nl + v["testo"] for v in voci)
+
+    def t_biblioteca_elenco(self):
+        from . import biblioteca as bib
+        fonti = bib.elenco(self.db)
+        n_esp = len(bib.elenco(self.db, True)) - len(fonti)
+        if not fonti:
+            return f"Nessun documento del proprietario (ci sono {n_esp} ruoli di esperti indicizzati)."
+        righe = [f"#{f['id']} «{f['titolo']}» ({f['tipo']}, {f['pezzi']} pezzi, {f['stato']})" + (f": {f['riassunto'][:200]}" if f["riassunto"] else "") for f in fonti]
+        return chr(10).join(righe) + f"{chr(10)}(+ {n_esp} ruoli di esperti indicizzati)"
 
     def t_esperti_elenco(self, divisione=""):
         from . import esperti as esp, profile as prof

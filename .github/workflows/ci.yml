@@ -13,6 +13,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - name: Strumento per leggere i PDF (serve ai test della Biblioteca)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils
       - name: Test
         run: cd bot && python -I -m unittest discover -s tests
       - name: Controllo segreti

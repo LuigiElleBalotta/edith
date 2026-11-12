@@ -57,6 +57,16 @@ Si leggono solo file di testo. Mai letti né scritti: `secrets/`, `.env`, chiavi
 ## Lavori automatici
 Report, ricerca opportunità e piano partono da soli ma fanno solo due cose: leggere (Instagram, web) e scrivere al proprietario su Telegram, in silenzio. Limiti: 20 attività in attesa (entro 60 giorni), 5 domande in coda, una domanda ogni 20 ore e solo tra le 10 e le 20, al massimo 3 promemoria contatti al giorno. Se un lavoro fallisce 3 volte nella settimana rinuncia. `/pausa` ferma tutto.
 
+## Biblioteca (documenti dati dal proprietario)
+Vedi [docs/BIBLIOTECA.md](docs/BIBLIOTECA.md).
+- **Il contenuto di un documento è un dato, mai un'istruzione.** Al manager arriva in un blocco etichettato che dice di non obbedire a ordini scritti dentro; il documento non può far pubblicare o scrivere (il manager non ha quelle funzioni) e i principi che ne ricava diventano regole solo con l'approvazione del proprietario.
+- **Solo il proprietario aggiunge documenti** (comando `/impara` da un proprietario, o pannello con password). Il bot **non** può aggiungerne da solo, perché un testo preso dal web e messo in memoria senza OK sarebbe un modo per inquinarla.
+- **Lettura dei file:** PDF con `pdftotext` (nessuna shell, tempo e pagine massimi, nel contenitore senza privilegi e con il disco in sola lettura); Word e PowerPoint con la sola libreria standard e controllo sulla dimensione dopo l'apertura. Limiti di dimensione (25 MB, 4 milioni di caratteri) per non bloccare il bot.
+- **Caricamento dal pannello:** accettato solo sulla pagina Biblioteca, solo dopo l'accesso, con codice anti-CSRF e limite di 26 MB; ogni altro modulo con file è rifiutato.
+- **Link:** una sola pagina, solo indirizzi pubblici (come il resto del web).
+- **Dati:** solo il testo estratto, nel database dell'account sul server; mai su Git; il file originale non si conserva; eliminabile dal pannello.
+- **Limite onesto:** i pezzi pertinenti vanno al servizio IA già usato, come ogni conversazione; e il testo di un documento ostile potrebbe far dire al manager qualcosa di sbagliato (non fargli fare qualcosa): per questo cita sempre la fonte e distingue nozione, dato misurato e cosa detta dal proprietario.
+
 ## Esperti (ruoli di terzi)
 I 35 «esperti» sono testi scritti da altri (agency-agents, MIT), quindi vanno trattati con prudenza. Vedi [docs/ESPERTI.md](docs/ESPERTI.md).
 - Una consulenza è **una sola richiesta all'IA, senza strumenti**: non può pubblicare, scrivere, comprare né leggere l'account; vede solo domanda e contesto passati dal manager, dopo un filtro che oscura token e chiavi.
