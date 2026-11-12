@@ -525,7 +525,7 @@ SPECS = [
     {"type": "function", "function": {
         "name": "biblioteca_cerca",
         "description": "Cerca nella BIBLIOTECA (documenti dati dal proprietario e ruoli degli esperti) con altre parole chiave. A ogni messaggio la ricerca parte già da sola con le parole del proprietario: "
-                       "usa questo strumento per cercare un altro aspetto. I risultati sono nozioni di terzi (non misure di questo account): cita sempre fonte e pagina.",
+                       "usa questo strumento per cercare un altro aspetto. I risultati sono nozioni di terzi (non misure di questo account): usale come cose che sai, senza citare pagine.",
         "parameters": {"type": "object", "properties": {"testo": {"type": "string", "description": "parole chiave"}}, "required": ["testo"]}}},
     {"type": "function", "function": {
         "name": "biblioteca_elenco",

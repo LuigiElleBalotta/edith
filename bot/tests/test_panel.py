@@ -361,18 +361,26 @@ class PanelTests(unittest.TestCase):
         st, body, _ = self.c.post("/account/alfa/biblioteca/link", {"url": "https://esempio.it/guida", "titolo": "Guida booking"})
         self.assertIn("era già in biblioteca", body)
 
+    def rifiutato(self, *a, **k):
+        """Stato HTTP di un caricamento: se il server rifiuta e chiude prima che il client finisca di inviare, su alcuni sistemi la
+        connessione cade (è comunque un rifiuto: 0)."""
+        try:
+            return self.c.upload(*a, **k)[0]
+        except ConnectionError:
+            return 0
+
     def test_biblioteca_sicurezza_del_caricamento(self):
         self.make_account()
         self.assertEqual(self.c.upload("/account/alfa/biblioteca/file", {}, {"file": ("a.txt", b"x" * 100)}, csrf=False)[0], 303)  # senza accesso
         self.assertEqual(self.c.login(), 303)
         self.assertEqual(self.c.upload("/account/alfa/biblioteca/file", {}, {"file": ("a.txt", b"x" * 100)}, csrf=False)[0], 403)  # senza codice anti-CSRF
-        self.assertEqual(self.c.upload("/account/alfa/profile", {}, {"file": ("a.txt", b"x")})[0], 415)  # i file si accettano solo qui
-        self.assertEqual(self.c.upload("/login", {}, {"file": ("a.txt", b"x")})[0], 415)
+        self.assertIn(self.rifiutato("/account/alfa/profile", {}, {"file": ("a.txt", b"x")}), (0, 415))  # i file si accettano solo qui
+        self.assertIn(self.rifiutato("/login", {}, {"file": ("a.txt", b"x")}), (0, 415))
         self.assertEqual(self.c.upload("/account/alfa/biblioteca/file", {}, {"file": ("a.txt", b"x" * 100)}, host="evil.example.com")[0], 421)
         vecchio = panel.MAX_UPLOAD
         panel.MAX_UPLOAD = 2000
         try:
-            self.assertEqual(self.c.upload("/account/alfa/biblioteca/file", {}, {"file": ("a.txt", b"x" * 5000)})[0], 413)
+            self.assertIn(self.rifiutato("/account/alfa/biblioteca/file", {}, {"file": ("a.txt", b"x" * 5000)}), (0, 413))
         finally:
             panel.MAX_UPLOAD = vecchio
 

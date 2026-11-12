@@ -16,7 +16,7 @@ Formati: **PDF, Word (.docx), PowerPoint (.pptx), testo, Markdown**, pagine web.
 2. **Indice.** I pezzi vanno in un indice di ricerca sul tuo server (la ricerca testuale integrata di SQLite: nessun servizio esterno, nessun costo).
 3. **Studio** (in background, qualche minuto). Il manager legge il documento a blocchi e ne ricava un **riassunto** e dei **principi operativi** («usa gli adesivi con le domande nelle storie», p. 12). Quando ha finito ti scrive su Telegram.
 4. **Lezioni, non regole.** I principi diventano **lezioni** in «Cosa ha imparato». Il manager può proporti qualcuno come regola stabile: **solo se approvi**, con i bottoni, come per le altre regole.
-5. **Uso «sempre».** A ogni tuo messaggio il sistema **cerca da solo** nella Biblioteca i pezzi pertinenti e li mette sotto gli occhi del manager (al massimo pochi pezzi per volta). Lui risponde citando la fonte («dal corso X, p. 12») e distinguendo *nozione da corso*, *dato misurato sul tuo account* e *cosa mi hai detto tu*. Se non c'è niente di pertinente, non aggiunge nulla.
+5. **Uso «sempre».** A ogni tuo messaggio il sistema **cerca da solo** nella Biblioteca i pezzi pertinenti e li mette sotto gli occhi del manager (al massimo pochi pezzi per volta). Lui ne parla come di cose che **sa** (non ti dice «a pagina 12» né «secondo il documento»), ma tiene distinte *nozione da corso*, *dato misurato sul tuo account* e *cosa mi hai detto tu*: non spaccia un consiglio da corso per un numero tuo. Se non c'è niente di pertinente, non aggiunge nulla.
 
 I **ruoli dei 35 esperti** sono nella stessa ricerca (dopo i tuoi documenti): per i temi che coprono vengono recuperati in automatico, oltre che interpellabili a richiesta. Vedi [ESPERTI.md](ESPERTI.md).
 
@@ -30,7 +30,7 @@ In **Biblioteca**: l'elenco dei documenti (stato dello studio, pagine, pezzi, pr
 - **PDF di sole immagini o scansioni** non si leggono: non c'è il riconoscimento delle immagini (OCR). Il manager ti dice che «in questo PDF non trovo testo».
 - **Slide con poco testo** rendono poco.
 - **Non «ricorda tutto».** Recupera pochi pezzi per volta; con una domanda vaga può pescare quelli sbagliati. Un pezzo conta solo se contiene almeno 2 parole della domanda.
-- **Il riassunto e i principi li fa l'IA e possono sbagliare.** Per questo portano la fonte (pagina) e passano dal tuo OK prima di diventare regole.
+- **Il riassunto e i principi li fa l'IA e possono sbagliare.** Per questo passano dal tuo OK prima di diventare regole (la pagina resta annotata in «Cosa ha imparato», solo per te).
 - **Documenti lunghi:** si studiano i primi 80 blocchi (circa 800.000 caratteri; `BIBLIOTECA_MAX_LOTTI` per cambiarlo) e il manager te lo dice. La ricerca invece copre tutto il documento.
 - **Costo:** lo studio costa qualche chiamata all'IA leggera, una volta sola per documento. Ogni messaggio con pezzi pertinenti aggiunge un po' di testo alla richiesta.
 

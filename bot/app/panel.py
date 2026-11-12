@@ -729,16 +729,30 @@ def make_handler(panel: Panel):
                 return self._send(200, panel.account_page(s, cfg)) if cfg else self._send(404, page("Non trovato", "<h1>Account non trovato</h1>", s["csrf"]))
             return self._send(404, page("Non trovato", "<h1>Pagina non trovata</h1>", s["csrf"]))
 
+        def _scarta_corpo(self):
+            """Rifiuto prima di leggere la richiesta: si svuota un corpo piccolo e si chiude la connessione, così il client
+            riceve la risposta invece di una connessione interrotta (succedeva a intermittenza)."""
+            self.close_connection = True
+            try:
+                n = int(self.headers.get("Content-Length") or 0)
+                if 0 < n <= 1_000_000:
+                    self.rfile.read(n)
+            except (ValueError, OSError):
+                pass
+
         def do_POST(self):
             if not self._host_ok():
+                self._scarta_corpo()
                 return self._send(421, "Indirizzo non ammesso")
             path = urllib.parse.urlparse(self.path).path
             files = {}
             ctype = self.headers.get("Content-Type") or ""
             if ctype.lower().startswith("multipart/form-data"):
                 if not re.fullmatch(r"/account/[a-z0-9-]+/biblioteca/file", path):
+                    self._scarta_corpo()
                     return self._send(415, "Tipo di richiesta non ammesso")
                 if not panel.session(self._cookie()):  # niente lettura di file da chi non ha fatto l'accesso
+                    self._scarta_corpo()
                     return self._redirect("/login")
                 parsed = self._multipart(ctype)
                 if parsed is None:

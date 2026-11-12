@@ -1,6 +1,7 @@
 # Cronologia
 
 ## 0.6 — Biblioteca
+- Il manager parla di ciò che ha studiato come di cose che sa, senza citare pagine. Lo studio riprova una volta se l'IA dà una risposta vuota e non fallisce per un solo blocco. Il pannello chiude con una risposta chiara anche i rifiuti prima della lettura (cadeva a intermittenza la connessione).
 - **Biblioteca**: il manager studia i documenti che gli dai (PDF, Word, PowerPoint, testo, Markdown, pagine web) da Telegram (`/impara`) o dal pannello. Il testo viene diviso in pezzi con titolo e pagina e indicizzato (SQLite FTS5); a ogni messaggio il sistema cerca da solo i pezzi pertinenti e li mette nel contesto, con l'avviso che sono nozioni di terzi; il manager cita fonte e pagina.
 - **Studio in background**: riassunto e principi operativi, che diventano lezioni (le regole solo con il tuo OK).
 - I ruoli dei 35 esperti sono nella stessa ricerca automatica. Strumenti `biblioteca_cerca` e `biblioteca_elenco` (il bot non può aggiungere documenti).
