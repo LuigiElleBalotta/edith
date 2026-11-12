@@ -57,7 +57,11 @@ Locali, organizzatori, festival: tabella `contacts` con stato (`da_scrivere`, `i
 1. Crea un gruppo Telegram con le persone e aggiungi il bot.
 2. Un proprietario scrive `/gruppo` nel gruppo: da ora è la chat condivisa (promemoria e lavori automatici arrivano lì).
 3. Per abilitare un'altra persona: un proprietario risponde a un suo messaggio con `/abilita` (`/disabilita` per toglierla).
-4. Nel gruppo ci si rivolge al bot con `@nome_del_bot richiesta` oppure rispondendo a un suo messaggio. Con la privacy di Telegram attiva (consigliato) il bot non legge il resto delle chiacchiere.
+4. **Dove scrive il bot:** se l'account ha un gruppo, **scrive solo lì** (promemoria, report, proposte). Se qualcuno gli scrive **in privato**, gli risponde **solo in privato**: i messaggi automatici restano comunque nel gruppo.
+5. **Quando risponde nel gruppo** (profilo `gruppo_modalita`, o dal pannello: Personalità → «Nel gruppo risponde»):
+   - `tutto` (predefinito): a tutti i messaggi di chi è abilitato, **tranne** quelli che rispondono a un'altra persona senza nominare il bot (lì parlano tra loro). I comandi rispondono sempre.
+   - `menzioni`: solo se lo chiami con `@nome_del_bot`, rispondi a un suo messaggio o usi un comando.
+6. **Perché a volte «non risponde»:** Telegram, di serie, mostra ai bot nei gruppi **solo** le @menzioni, le risposte ai loro messaggi e i comandi (la «privacy» del bot). Per fargli leggere tutto il gruppo: su Telegram apri **@BotFather** → `/setprivacy` → scegli il bot → **Disable**; poi **togli e rimetti il bot nel gruppo** (oppure nominalo amministratore). Il bot controlla da solo ogni 10 minuti (e all'avvio): se vede solo le menzioni, lo scrive **una volta** nel gruppo e lo dice in `/stato`.
 
 ## Strumenti a riga di comando (dentro il contenitore)
 ```bash

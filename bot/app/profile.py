@@ -17,6 +17,7 @@ Campi (tutti facoltativi):
 - biblioteca_automatica: se true (predefinito) a ogni messaggio il manager cerca da solo nella Biblioteca i passaggi pertinenti;
 - voce: come parla il manager. Vuoto o «edith» (predefinito) = lo stile di E.D.I.T.H.; «neutra» = tono semplice e sobrio; «personalizzata» = il testo di voce_testo;
 - voce_testo: descrizione della voce (solo se voce = personalizzata), per esempio «Parla con calma, da buon amico, senza battute»;
+- gruppo_modalita: nel gruppo condiviso, «tutto» (predefinito: risponde ai messaggi di chi è abilitato, tranne quelli rivolti ad altre persone) oppure «menzioni» (solo se lo chiami con @nome, gli rispondi o usi un comando);
 - esperti_spenti: id degli esperti (consulenti) da non interpellare per questo account;
 - riproponi_dopo_giorni: dopo quanti giorni il manager può riproporre una regola che hai rifiutato (predefinito 14);
 - kb: {repo, branch, write_branch} archivio di conoscenza (la chiave di accesso è nell'ambiente, mai qui).
@@ -24,7 +25,7 @@ Campi (tutti facoltativi):
 import json
 import os
 
-DEFAULTS = {"proprietario": "", "ambito": "", "identita": "", "regole_extra": [], "strumenti_spenti": [], "lavori_spenti": [], "lavori": {}, "kb": {}, "utenti": {}, "benvenuto": "", "tastiera": [], "riproponi_dopo_giorni": 14, "esperti_spenti": [], "biblioteca_automatica": True, "voce": "", "voce_testo": ""}
+DEFAULTS = {"proprietario": "", "ambito": "", "identita": "", "regole_extra": [], "strumenti_spenti": [], "lavori_spenti": [], "lavori": {}, "kb": {}, "utenti": {}, "benvenuto": "", "tastiera": [], "riproponi_dopo_giorni": 14, "esperti_spenti": [], "biblioteca_automatica": True, "voce": "", "voce_testo": "", "gruppo_modalita": ""}
 
 
 def load(data_dir) -> dict:

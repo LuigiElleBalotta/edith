@@ -182,6 +182,7 @@ def save_profile(path: str, form: dict) -> None:
     for k in ("proprietario", "ambito", "identita", "benvenuto"):
         data[k] = (form.get(k) or "").strip()
     data["voce"] = form.get("voce") if form.get("voce") in ("edith", "neutra", "personalizzata") else "edith"
+    data["gruppo_modalita"] = form.get("gruppo_modalita") if form.get("gruppo_modalita") in ("tutto", "menzioni") else "tutto"
     data["voce_testo"] = (form.get("voce_testo") or "").strip()[:800]
     data["regole_extra"] = [r.strip() for r in (form.get("regole_extra") or "").replace("\r", "").split("\n") if r.strip()]
     for k in ("strumenti_spenti", "lavori_spenti"):
@@ -515,6 +516,8 @@ class Panel:
             + field("Come ti chiama il manager", "proprietario", p.get("proprietario", ""), "Il nome con cui si rivolge a te. Esempio: <i>Marta</i>.")
             + choice("Come parla", "voce", [("edith", "Come E.D.I.T.H. (predefinita): vivace, sicura, un po' sfacciata"), ("neutra", "Neutra: semplice e sobria"), ("personalizzata", "La descrivo io")],
                      p.get("voce") or "edith", "Il tono con cui il manager ti scrive. Le regole di sicurezza e l'onestà valgono sempre, qualunque voce scelga.")
+            + choice("Nel gruppo risponde", "gruppo_modalita", [("tutto", "A tutti i messaggi di chi è abilitato (tranne quelli rivolti ad altre persone)"), ("menzioni", "Solo se lo chiami con @nome, gli rispondi o usi un comando")],
+                     p.get("gruppo_modalita") or "tutto", "Vale solo se l'account ha un gruppo condiviso (si registra scrivendo /gruppo nel gruppo). Con Telegram deve poter leggere il gruppo: vedi docs/ACCOUNTS.md.")
             + area("Descrizione della voce (solo se scegli «La descrivo io»)", "voce_testo", p.get("voce_testo", ""), "Esempio: <i>Parla con calma, da buon amico, senza battute.</i>", 2)
             + area("Chi è il manager e per chi lavora", "identita", p.get("identita", ""), "Una descrizione libera. Se la scrivi, sostituisce la presentazione di base; le regole di sicurezza restano sempre. Esempio: <i>Sei il manager social di una band indie di Milano…</i>")
             + area("Regole in più", "regole_extra", chr(10).join(p.get("regole_extra") or []), "Una regola per riga. Esempio: <i>Non proporre mai collaborazioni a pagamento.</i>")

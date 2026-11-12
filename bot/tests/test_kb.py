@@ -289,6 +289,86 @@ class GruppoTests(unittest.TestCase):
             m["reply_to_message"] = {"from": reply}
         return {"update_id": 1, "message": m}
 
+    def registra(self):
+        from app.main import process
+        self.db.set("bot_username", "mio_bot")
+        process(self.tg, self.db, self.ag, self.cfg, self.msg(1, "/gruppo", name="Marco"))
+        self.Tg.sent.clear()
+        self.Ag.seen.clear()
+
+    def test_gruppo_risponde_a_tutto_ma_non_quando_parlano_tra_loro(self):
+        from app.main import process
+        self.registra()
+        # messaggio normale di un abilitato: risponde nel gruppo, senza bisogno della menzione
+        process(self.tg, self.db, self.ag, self.cfg, self.msg(1, "che idee hai per sabato?", name="Marco"))
+        self.assertEqual(self.Ag.seen, ["[Marco] che idee hai per sabato?"])
+        self.assertEqual(self.Tg.sent[-1][0], -100)
+        # risposta a un messaggio di un'altra persona senza nominare il bot: parlano tra loro, silenzio
+        n = len(self.Tg.sent)
+        process(self.tg, self.db, self.ag, self.cfg, self.msg(1, "sono d'accordo", reply={"id": 7, "is_bot": False, "first_name": "Francesca"}, name="Marco"))
+        self.assertEqual(len(self.Tg.sent), n)
+        # ma se nomina il bot, o risponde a un messaggio del bot, risponde
+        process(self.tg, self.db, self.ag, self.cfg, self.msg(1, "@mio_bot tu che ne pensi?", reply={"id": 7, "is_bot": False, "first_name": "F"}, name="Marco"))
+        self.assertEqual(self.Ag.seen[-1], "[Marco] tu che ne pensi?")
+        process(self.tg, self.db, self.ag, self.cfg, self.msg(1, "e quindi?", reply={"id": 9, "is_bot": True, "username": "mio_bot"}, name="Marco"))
+        self.assertEqual(self.Ag.seen[-1], "[Marco] e quindi?")
+        # un estraneo non ottiene risposta
+        n = len(self.Tg.sent)
+        process(self.tg, self.db, self.ag, self.cfg, self.msg(99, "ciao bot"))
+        self.assertEqual(len(self.Tg.sent), n)
+
+    def test_gruppo_modalita_solo_menzioni(self):
+        from app.main import process
+        self.registra()
+        json.dump({"gruppo_modalita": "menzioni"}, open(os.path.join(self.tmp.name, "profile.json"), "w", encoding="utf-8"))
+        n = len(self.Tg.sent)
+        process(self.tg, self.db, self.ag, self.cfg, self.msg(1, "ciao a tutti", name="Marco"))
+        self.assertEqual((len(self.Tg.sent), self.Ag.seen), (n, []))  # senza menzione: silenzio
+        process(self.tg, self.db, self.ag, self.cfg, self.msg(1, "@mio_bot ciao", name="Marco"))
+        self.assertEqual(self.Ag.seen, ["[Marco] ciao"])
+        process(self.tg, self.db, self.ag, self.cfg, self.msg(1, "/stato", name="Marco"))  # i comandi rispondono sempre
+        self.assertIn("Sistema", self.Tg.sent[-1][1])
+        # un comando per un altro bot non è per noi
+        n = len(self.Tg.sent)
+        process(self.tg, self.db, self.ag, self.cfg, self.msg(1, "/stato@altro_bot", name="Marco"))
+        self.assertEqual(len(self.Tg.sent), n)
+
+    def test_scrivere_in_privato_risponde_in_privato_anche_con_il_gruppo(self):
+        from app.main import destinations, process
+        self.registra()
+        process(self.tg, self.db, self.ag, self.cfg, self.msg(1, "ciao in privato", chat=1, typ="private", name="Marco"))
+        self.assertEqual(self.Tg.sent[-1][0], 1)  # la risposta resta nella chat privata
+        self.assertEqual(destinations(self.cfg, self.db), [-100])  # i messaggi automatici restano SOLO nel gruppo
+
+    def test_avviso_privacy_una_sola_volta_e_stato(self):
+        from app.main import group_visibility, handle_command
+        self.registra()
+
+        class T2(self.Tg):
+            vede = False
+            admin = False
+
+            def call(s, metodo, **k):
+                if metodo == "getMe":
+                    return {"id": 5, "username": "mio_bot", "can_read_all_group_messages": T2.vede}
+                if metodo == "getChatMember":
+                    return {"status": "administrator" if T2.admin else "member"}
+                return {}
+        tg = T2()
+        self.assertFalse(group_visibility(tg, self.db))
+        self.assertEqual(len(self.Tg.sent), 1)
+        self.assertIn("BotFather", self.Tg.sent[0][1])
+        self.assertEqual(self.Tg.sent[0][0], -100)
+        self.assertFalse(group_visibility(tg, self.db))
+        self.assertEqual(len(self.Tg.sent), 1)  # niente ripetizioni
+        self.assertIn("vedo solo", handle_command("/stato", self.db))
+        T2.admin = True  # se lo nominano amministratore, vede tutto
+        self.assertTrue(group_visibility(tg, self.db))
+        self.assertIn("vedo tutti", handle_command("/stato", self.db))
+        T2.admin, T2.vede = False, False
+        group_visibility(tg, self.db)
+        self.assertEqual(len(self.Tg.sent), 2)  # se torna a non vedere, avvisa di nuovo
+
     def test_gruppo_condiviso_abilita_e_menzione(self):
         from app.main import destinations, group_chat, owner_ids, process
         self.db.set("bot_username", "mio_bot")

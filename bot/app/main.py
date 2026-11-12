@@ -85,6 +85,62 @@ def destinations(cfg, db) -> list:
     return [g] if g else list(owner_ids(cfg, db))
 
 
+def group_addressed(msg, uname: str) -> bool:
+    """Nel gruppo: il messaggio è rivolto al bot (lo nomina con @, risponde a un suo messaggio)."""
+    t = (msg.get("text") or msg.get("caption") or "").lower()
+    if uname and ("@" + uname.lower()) in t:
+        return True
+    rep = ((msg.get("reply_to_message") or {}).get("from") or {})
+    return bool(rep.get("is_bot") and uname and (rep.get("username") or "").lower() == uname.lower())
+
+
+def group_wants_answer(msg, uname: str, mode: str) -> bool:
+    """Nel gruppo condiviso: il bot deve rispondere a questo messaggio?
+    - un comando risponde sempre (se non è per un altro bot);
+    - «menzioni»: solo se è chiamato o se gli si risponde;
+    - «tutto» (predefinito): a tutti i messaggi di chi è abilitato, tranne quelli che rispondono a un'altra persona senza nominare il bot."""
+    t = (msg.get("text") or msg.get("caption") or "")
+    if t.startswith("/"):
+        first = t.split()[0]
+        return "@" not in first or first.split("@", 1)[1].lower() == (uname or "").lower()
+    if group_addressed(msg, uname):
+        return True
+    if mode == "menzioni":
+        return False
+    rep = (msg.get("reply_to_message") or {}).get("from") or {}
+    return not (rep and not rep.get("is_bot"))  # risponde a un'altra persona: parlano tra loro
+
+
+def group_visibility(tg, db) -> bool:
+    """Il bot vede TUTTI i messaggi del gruppo? Sì se la privacy è spenta (BotFather) o se è amministratore. Aggiorna lo stato e,
+    una sola volta, avvisa nel gruppo se vede solo le menzioni. Ritorna True se vede tutto."""
+    g = group_chat(db)
+    if not g:
+        return True
+    try:
+        me = tg.call("getMe") or {}
+        vede = bool(me.get("can_read_all_group_messages"))
+        if not vede:
+            try:
+                vede = (tg.call("getChatMember", chat_id=g, user_id=me.get("id")) or {}).get("status") in ("administrator", "creator")
+            except TgError:
+                pass
+    except TgError:
+        return True  # non si sa: niente allarmi
+    db.set("gruppo_vede_tutto", "1" if vede else "0")
+    if vede:
+        db.set("gruppo_avvisato", "")
+    elif db.get("gruppo_avvisato", "") != "1":
+        db.set("gruppo_avvisato", "1")
+        try:
+            tg.send(g, "Ci sono, ma per ora vedo solo i messaggi in cui mi nominate (@" + (me.get("username") or "il_mio_nome") + "), le risposte ai miei messaggi e i comandi. "
+                       "Per farmi leggere tutto il gruppo: su Telegram aprite @BotFather → /setprivacy → scegliete me → Disable, poi togliete e rimettete il bot nel gruppo "
+                       "(oppure nominatemi amministratore). Intanto scrivetemi con @" + (me.get("username") or "il_mio_nome") + " davanti.")
+        except TgError:
+            pass
+    return vede
+
+
 def speaker_name(db, agent, uid, msg) -> str:
     names = dict((getattr(agent, "profile", {}) or {}).get("utenti", {}))
     try:
@@ -307,7 +363,10 @@ def handle_command(cmd: str, db: Db) -> str:
                 f"Approvazioni in attesa: {n['approvals_pending']}\n"
                 f"Instagram: {'collegato (sola lettura)' if os.environ.get('META_IG_TOKEN') else 'non collegato'}.\n"
                 f"Contenuti in archivio: {sum(db.content_summary().values())}.\n"
-                f"Lavori automatici: vedi /agenda.")
+                f"Lavori automatici: vedi /agenda."
+                + ((("\nGruppo: vedo tutti i messaggi." if db.get("gruppo_vede_tutto", "") != "0" else
+                     "\nGruppo: vedo solo le @menzioni, le risposte ai miei messaggi e i comandi (privacy attiva: vedi @BotFather → /setprivacy → Disable)."))
+                   if group_chat(db) else ""))
     if c == "/pausa":
         db.set("paused", "1"); db.audit("proprietario", "pausa")
         return "Fatto: ho messo in pausa ogni azione verso l'esterno. Con /riprendi riparto."
@@ -421,6 +480,10 @@ def process(tg: Tg, db: Db, agent: Agent, cfg, update) -> None:
             db.audit("sconosciuto", "gruppo_non_registrato", str(chat_id))
             return
         uname = db.get("bot_username", "")
+        from . import profile as _profm
+        modo = (_profm.load(getattr(db, "profile_dir", "") or os.path.dirname(db.path)).get("gruppo_modalita") or "tutto").strip().lower()
+        if not group_wants_answer(msg, uname, "menzioni" if modo == "menzioni" else "tutto"):
+            return  # nel gruppo parlano tra loro, o il bot non è stato chiamato: resta in silenzio
         if uname:  # tolgo la menzione dal testo
             import re as _re
             text = _re.sub(r"@" + _re.escape(uname) + r"\b", "", text, flags=_re.I).strip()
@@ -619,6 +682,10 @@ def run_account(cfg, stop=None) -> int:
         pass
     db.audit("sistema", "avvio")
     try:
+        group_visibility(tg, db)
+    except Exception as e:
+        db.audit("sistema", "gruppo_controllo_errore", type(e).__name__)
+    try:
         tg.set_commands(COMANDI)
     except TgError as e:
         db.audit("sistema", "comandi_non_impostati", str(e)[:80])
@@ -629,7 +696,14 @@ def run_account(cfg, stop=None) -> int:
     last_backup = 0.0
     last_sched = 0.0
     last_import_check = 0.0
+    last_gruppo = time.time()
     while not _stop and not stop.is_set():
+        if time.time() - last_gruppo > 600:  # la privacy del bot nel gruppo si controlla ogni 10 minuti (si può cambiare senza riavviare)
+            last_gruppo = time.time()
+            try:
+                group_visibility(tg, db)
+            except Exception as e:
+                db.audit("sistema", "gruppo_controllo_errore", type(e).__name__)
         if time.time() - last_backup > 86400:  # copia di sicurezza del database, una al giorno
             last_backup = time.time()
             try:
