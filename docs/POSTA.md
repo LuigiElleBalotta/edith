@@ -16,6 +16,11 @@ Ogni account può avere la **sua** posta: account → **Posta** (menu laterale).
 - Per tornare alla comune: account → Posta → «Torna alla comune» (con conferma). Le impostazioni proprie vengono tolte; tutto il resto dell'account resta com'è.
 - Gli altri account non cambiano. La pagina **Posta** comune elenca quali account hanno una posta propria.
 
+## Dove vedo le mail inviate
+- **Nel pannello:** account → **Posta** → riquadro **Mail inviate**: le ultime 50 con destinatario, data, testo completo e se risultano aperte.
+- **Su Telegram:** chiedi al manager «mostrami le mail inviate» (strumento `mail_registro`).
+- **Non nella casella:** le mail partono dal server SMTP e **non compaiono nella cartella «Posta inviata»** della webmail di `info@`, perché il server di posta non le salva lì. Le **risposte**, invece, arrivano nella «Posta in arrivo» del mittente.
+
 ## Come lavora il manager
 - `contatto_aggiungi`: aggiunge un contatto. Se manca anche **un solo dato** (nome, tipo, zona, canale, email/telefono/handle secondo il canale, link della fonte, priorità, data della prima scrittura) **non salva e te lo chiede**. Non inventa mai i dati.
 - `mail_proponi`: prepara la mail (una persona, oggetto, testo fino a 2500 caratteri). Crea la proposta con i bottoni; **la mail non parte**.

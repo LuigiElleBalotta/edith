@@ -486,6 +486,23 @@ class PannelloPostaTests(unittest.TestCase):
             propria.server_close()
         self.assertEqual(self.req("GET", "/account/nessuno/posta")[0], 404)
 
+    def test_mail_inviate_visibili_nella_pagina_posta_dell_account(self):
+        self.login()
+        self.assertIn("Ancora nessuna mail", self.req("GET", "/account/alfa/posta")[1].decode())
+        db = Db(os.path.join(self.data, "alfa"))
+        pc = posta.Config(cfg_vals(self.smtp.server_address[1]))
+        posta.deliver(db, pc, {"to": "chi@locale.it", "subject": "Serata <b>live</b>", "body": "Ciao <script>alert(1)</script> a presto"}, "alfa", "2026-11-12")
+        tok = db._x("SELECT token FROM mail_inviate").fetchone()[0]
+        db.mail_open(tok)
+        db.close()
+        body = self.req("GET", "/account/alfa/posta")[1].decode()
+        self.assertIn("chi@locale.it", body)
+        self.assertIn("aperta 1 volta", body)
+        self.assertIn("Serata &lt;b&gt;live&lt;/b&gt;", body)  # oggetto e testo sono escapati: nessun HTML dalla mail
+        self.assertNotIn("<script>alert(1)</script>", body)
+        self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", body)
+        self.assertIn("Vedi il testo", body)
+
     def test_pixel_senza_accesso_conta_solo_codici_veri(self):
         db = Db(os.path.join(self.data, "alfa"))
         pc = posta.Config(cfg_vals(self.smtp.server_address[1]))

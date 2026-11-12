@@ -387,9 +387,11 @@ class Db:
     def mail_recent_to(self, addr: str, days: int = 14) -> int:
         return self._x("SELECT COUNT(*) FROM mail_inviate WHERE lower(to_addr)=lower(?) AND ts>=?", (addr, time.time() - days * 86400)).fetchone()[0]
 
-    def mail_list(self, limit: int = 30) -> list:
-        cur = self._x("SELECT id,ts,to_addr,subject,tracking,aperture,prima_apertura,contact_id FROM mail_inviate ORDER BY id DESC LIMIT ?", (limit,))
-        return [dict(zip(("id", "ts", "a", "oggetto", "tracciata", "aperture", "prima_apertura", "contatto"), r)) for r in cur.fetchall()]
+    def mail_list(self, limit: int = 30, con_testo: bool = False) -> list:
+        cur = self._x("SELECT id,ts,to_addr,subject,tracking,aperture,prima_apertura,contact_id" + (",body" if con_testo else "")
+                      + " FROM mail_inviate ORDER BY id DESC LIMIT ?", (limit,))
+        chiavi = ("id", "ts", "a", "oggetto", "tracciata", "aperture", "prima_apertura", "contatto") + (("testo",) if con_testo else ())
+        return [dict(zip(chiavi, r)) for r in cur.fetchall()]
 
     def mail_blocked(self, addr: str) -> bool:
         return self._x("SELECT 1 FROM mail_blocco WHERE addr=?", ((addr or "").strip().lower(),)).fetchone() is not None

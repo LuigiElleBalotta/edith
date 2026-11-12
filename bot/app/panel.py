@@ -378,8 +378,39 @@ class Panel:
                 togli = ""
             body = (f'<a href="/account/{H(cfg.slug)}" class="text-sm text-indigo-600 hover:underline dark:text-indigo-400">← Torna a {H(cfg.slug)}</a>'
                     f'<h1 class="mt-2 text-2xl font-bold">Posta di {H(cfg.slug)}</h1>' + nota + flash(msg, err)
+                    + self._mail_inviate_card(cfg)
                     + card("Posta propria dell'account", "Se la imposti, vince sempre su quella comune.", form, "", "", "e-span") + card("Prova", "", prova) + togli + card("Come funziona", "", info))
         return page("Posta", body, s["csrf"])
+
+    def _mail_inviate_card(self, cfg) -> str:
+        import datetime as dt
+        try:
+            db = Db(cfg.data_dir)
+            try:
+                righe = db.mail_list(50, con_testo=True)
+                oggi = db.mail_today()
+            finally:
+                db.close()
+        except Exception:
+            righe, oggi = [], 0
+        if not righe:
+            return card("Mail inviate", "", '<p class="mt-3 text-slate-600 dark:text-slate-300">Ancora nessuna mail partita da questo account.</p>', "", "", "e-span")
+        voci = ""
+        for r in righe:
+            quando = dt.datetime.fromtimestamp(r["ts"]).strftime("%d/%m/%Y %H:%M")
+            if not r["tracciata"]:
+                ap = pill("senza segnale di apertura")
+            elif r["aperture"]:
+                ap = pill(f'aperta {r["aperture"]} volt' + ("a" if r["aperture"] == 1 else "e") + " · la prima il " + dt.datetime.fromtimestamp(r["prima_apertura"]).strftime("%d/%m %H:%M"), "ok")
+            else:
+                ap = pill("nessuna apertura registrata")
+            voci += (f'<li class="mt-3 border-t border-slate-200 pt-3 dark:border-slate-700"><div class="flex flex-wrap items-center justify-between gap-2">'
+                     f'<span><b>{H(r["oggetto"])}</b><br><span class="{HELP}">a {H(r["a"])} · {quando}</span></span>{ap}</div>'
+                     f'<details class="mt-2"><summary class="cursor-pointer text-sm text-indigo-600 dark:text-indigo-400">Vedi il testo</summary>'
+                     f'<pre class="mt-2 whitespace-pre-wrap break-words rounded-lg bg-slate-900 p-3 text-sm text-slate-100">{H(r["testo"])}</pre></details></li>')
+        nota = (f'<p class="{HELP}">Oggi sono partite {oggi} mail. Qui vedi le ultime {len(righe)}. Le risposte arrivano nella casella del mittente (di solito «Posta in arrivo»), '
+                'non qui. «Aperta» è indicativo: alcuni programmi di posta caricano le immagini da soli.</p>')
+        return card("Mail inviate", "", nota + f'<ul class="list-none">{voci}</ul>', "", "", "e-span")
 
     def do_posta_save(self, form, cfg=None) -> str:
         from . import posta
