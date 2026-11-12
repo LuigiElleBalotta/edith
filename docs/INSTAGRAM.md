@@ -32,12 +32,22 @@ Ci vogliono circa 15 minuti. Collegare Instagram è **facoltativo**: senza, il m
 
    **Nota onesta sui commenti:** Meta non ha un permesso «solo lettura commenti». `instagram_manage_comments` permette di leggere ma anche di rispondere, nascondere ed eliminare. Il manager **non lo fa mai** (nel codice non esiste nessuna azione di scrittura su Instagram), ma il token tecnicamente potrebbe. Se preferisci un token che non possa scrivere neanche in teoria, non spuntarlo: perdi solo l'analisi dei commenti.
 6. **Copia il token** (si vede una sola volta) e incollalo quando `./manager add` lo chiede, insieme all'**ID dell'account Instagram** (Business Suite → Impostazioni → Account Instagram, è un numero lungo).
-7. **Verifica:** `./manager check` deve mostrare `✓ Instagram: @tuoaccount (… follower)`.
+7. **Verifica che funzioni:** `./manager check` deve mostrare `✓ Instagram: @tuoaccount (… follower)`.
+8. **Verifica i permessi del token** (importante, vedi sotto): un token che funziona può comunque avere più permessi del necessario.
+
+## Verificare i permessi del token
+`./manager check` dice solo se il token funziona, non **quali permessi ha**. Per vederli:
+1. Apri lo strumento di Meta [Access Token Debugger](https://developers.facebook.com/tools/debug/accesstoken/) e incolla il token (è uno strumento di Meta: il token va solo a Meta).
+2. Leggi l'elenco **Scopes**. Per la sola lettura devono esserci solo `instagram_basic`, `instagram_manage_insights`, `pages_read_engagement`, `pages_show_list` (e `instagram_manage_comments` solo se vuoi leggere i commenti).
+3. Se vedi `instagram_content_publish`, `instagram_manage_contents` o `instagram_manage_messages`, il token **potrebbe** pubblicare o scrivere messaggi. EDITH non lo fa mai (nel codice non esiste nessuna azione di scrittura su Instagram), ma il rischio c'è se il token finisce in mani sbagliate. **Revoca e rigenera** il token spuntando solo i permessi della tabella.
+
+Se per scelta tieni un token più ampio, trattalo come una chiave di casa: solo nel file `account.env` con permessi `600`, mai in chat o nel repository, e cambialo se ha toccato posti non sicuri.
 
 Da quel momento il manager importa da solo ogni giorno post, statistiche e commenti, senza che tu faccia nulla.
 
 ## Se qualcosa non va
 - **«Application does not have permission» sulle statistiche:** manca `instagram_manage_insights` nel token, oppure «Insights» nell'assegnazione delle risorse. Rigenera il token.
+- **Non trovo una voce dell'interfaccia:** Meta cambia spesso i nomi. Cerca la funzione («Utenti di sistema», «Genera token», «Assegna risorse») e segui quello che vedi a schermo.
 - **Il portfolio ha restrizioni («Con restrizioni»):** Meta può limitare un portfolio per le inserzioni; la lettura continua a funzionare. Le restrizioni si controllano in Business Suite → Centro per la sicurezza.
 - **Token rifiutato dopo mesi:** può essere stato revocato o la password dell'account cambiata. Rigenera il token e aggiorna `accounts/<nome>/account.env`.
 - **Se un token è finito dove non doveva:** *Revoca token* nell'utente di sistema, subito. Poi rigeneralo. Vedi anche [SECURITY.md](../SECURITY.md).

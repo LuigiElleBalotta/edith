@@ -9,4 +9,8 @@ Grazie! Qualche regola semplice, che nasce dal fatto che questo programma lavora
 5. **Test.** `cd bot && python -I -m unittest discover -s tests` (nessuna rete: le chiamate esterne si simulano).
 6. Messaggi per le persone **in italiano semplice**, senza gergo.
 
+7. **Nessun dato personale** (nomi, ID, email, domini privati) nei file né nella storia dei commit: gli esempi sono inventati.
+
+Le regole complete e la mappa del codice sono in [CLAUDE.md](CLAUDE.md).
+
 Per cambiamenti grandi apri prima una issue.

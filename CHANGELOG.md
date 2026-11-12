@@ -5,6 +5,7 @@
 - **Pannello web** (Python, nessuna dipendenza, nessun JavaScript): creazione guidata di un account, personalità e regole, chiavi, verifica dei collegamenti, riavvio e messa da parte. Solo da localhost, con password; vedi [docs/PANEL.md](docs/PANEL.md).
 - Pannello rifatto con Tailwind (compilato nel repo, nessun Node): pagine guidate, un testo di aiuto con esempio per ogni campo, passi numerati con barra di avanzamento, messaggi chiari, tema scuro, uso da telefono.
 - Nuova pagina **Stato e registro**: risorse, stato degli account, ultime righe del registro (segreti oscurati), riavvio di tutti gli account.
+- Documentazione: guida completa [docs/SETUP.md](docs/SETUP.md), guida per chi accompagna un utente [docs/GUIDARE-L-UTENTE.md](docs/GUIDARE-L-UTENTE.md), [CLAUDE.md](CLAUDE.md) e [AGENTS.md](AGENTS.md); in [docs/INSTAGRAM.md](docs/INSTAGRAM.md) come verificare i permessi del token.
 - Le modifiche al profilo valgono subito, senza riavviare.
 - OmniRoute 3.8.53: provato con tutti e tre i modelli su entrambi gli account.
 
