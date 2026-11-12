@@ -1,0 +1,31 @@
+name: Deploy
+# Aggiorna il tuo server dopo ogni nuova immagine. È SPENTO finché non lo attivi:
+#   Impostazioni → Secrets and variables → Actions:
+#     variabile  DEPLOY_ENABLED = true
+#     segreti    DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY (chiave privata dedicata), DEPLOY_PATH (cartella con docker-compose.yml)
+# Consiglio: usa un utente del server con il solo permesso di usare docker e una chiave SSH usata solo per questo.
+on:
+  workflow_run:
+    workflows: ["Immagine"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deploy:
+    if: ${{ vars.DEPLOY_ENABLED == 'true' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggiorna il server
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER_: ${{ secrets.DEPLOY_USER }}
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DIR: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -i ~/.ssh/deploy "$USER_@$HOST" "cd '$DIR' && docker compose pull manager && docker compose up -d manager && docker image prune -f"
+          rm -f ~/.ssh/deploy

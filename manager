@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Uso quotidiano.   ./manager add | list | check [nome] | remove nome | logs | status | update | restart
+set -euo pipefail
+cd "$(dirname "$0")"
+case "${1:-help}" in
+  add|list|check|remove) docker compose exec -it manager python -m app.accounts "$@" ;;
+  logs)    docker compose logs -f --tail=100 manager ;;
+  status)  docker compose ps; docker stats --no-stream edith ;;
+  restart) docker compose restart manager ;;
+  update)  git pull --ff-only && (docker compose pull --quiet 2>/dev/null || docker compose build) && docker compose up -d ;;
+  *) sed -n '2p' "$0" ;;
+esac

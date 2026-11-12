@@ -1,0 +1,17 @@
+# segreti e dati: non vanno mai nel repository
+.env
+.env.*
+!.env.example
+account.env
+kbkey
+*.pem
+*.sqlite
+*.sqlite-*
+accounts/
+data/
+media/
+private/
+# python
+__pycache__/
+*.pyc
+*.log

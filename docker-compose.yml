@@ -1,0 +1,30 @@
+# EDITH: UN contenitore, tutti gli account dentro (ognuno con dati, bot e segreti propri).
+# Nessuna porta esposta: il bot chiama Telegram (long polling), nessun proxy necessario.
+# Avvio: ./setup.sh   |   Uso quotidiano: ./manager
+services:
+  manager:
+    image: ${MANAGER_IMAGE:-ghcr.io/luigielleballotta/edith:latest}
+    build: ./bot
+    container_name: edith
+    restart: unless-stopped
+    user: "${MANAGER_UID:-1000}:${MANAGER_GID:-1000}"   # lo stesso utente che possiede ./data e ./accounts
+    env_file: .env                                      # solo impostazioni comuni; i segreti sono in accounts/<nome>/account.env
+    ports:
+      - "127.0.0.1:${PANEL_HOST_PORT:-8787}:8080"           # pannello web: SOLO da questo computer (tunnel SSH o proxy HTTPS tuo)
+    volumes:
+      - ./data:/data                                    # database, file temporanei, copie di sicurezza (uno per account)
+      - ./accounts:/config/accounts                     # account.env (chmod 600), profile.json, chiave dell'archivio
+    mem_limit: 1g                                       # il bot usa ~20 MB per account; il resto serve solo se Chromium legge una pagina
+    memswap_limit: 1g
+    cpus: 1.5
+    pids_limit: 300
+    shm_size: 256m
+    read_only: true
+    tmpfs: ["/tmp:size=300m"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    healthcheck:
+      test: ["CMD", "python", "-I", "-c", "import glob,sqlite3;[sqlite3.connect(f).execute('select 1') for f in glob.glob('/data/*/manager.sqlite')]"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
