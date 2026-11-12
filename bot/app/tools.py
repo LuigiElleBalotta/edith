@@ -1117,7 +1117,8 @@ class Tools:
     def t_mail_stato(self):
         cfg = self.posta()
         return json.dumps({"configurata": cfg.configured, "inviate_oggi": self.db.mail_today(), "limite_giornaliero": cfg.max_day,
-                           "tracciamento_aperture": cfg.tracking_possible}, ensure_ascii=False)
+                           "tracciamento_aperture": cfg.tracking_possible, "posta": "propria di questo account" if cfg.origin == "account" else "comune"},
+                          ensure_ascii=False)
 
     def t_mail_proponi(self, a, oggetto, testo, motivo, contatto_id=None):
         from . import approvals, posta as _posta

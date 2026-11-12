@@ -36,6 +36,18 @@ H = html.escape
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
+
+def _css_version() -> str:
+    """Impronta breve del foglio di stile: l'indirizzo cambia a ogni aggiornamento, così il browser non resta con una copia vecchia."""
+    try:
+        with open(os.path.join(STATIC_DIR, "panel.css"), "rb") as f:
+            return hashlib.sha256(f.read()).hexdigest()[:10]
+    except OSError:
+        return "0"
+
+
+CSS_VERSION = _css_version()
+
 # ---- piccoli componenti HTML (classi Tailwind; i testi di label/help sono sempre fissi, mai dati dell'utente) ----
 INPUT = ("block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-indigo-500 "
          "focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100")
@@ -122,7 +134,7 @@ def page(title: str, body: str, csrf: str = "", logged: bool = True) -> str:
                f'<form method="post" action="/logout"><input type="hidden" name="csrf" value="{H(csrf)}">'
                '<button class="text-sm text-slate-600 underline hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">Esci</button></form></div></header>')
     return ('<!doctype html><html lang="it" class="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#050b17">'
-            f'<title>{H(title)} · EDITH</title><link rel="stylesheet" href="/static/panel.css"></head>'
+            f'<title>{H(title)} · EDITH</title><link rel="stylesheet" href="/static/panel.css?v={CSS_VERSION}"></head>'
             '<body class="min-h-screen bg-slate-50 text-base leading-relaxed text-slate-900 antialiased dark:bg-slate-900 dark:text-slate-100">'
             f'{nav}<main class="e-main{"" if logged else " e-narrow"}">{body}</main>'
             '<footer class="e-foot">E.D.I.T.H. &middot; Even Dead, I&rsquo;m The Hero</footer></body></html>')
@@ -310,13 +322,21 @@ class Panel:
         from . import posta
         return posta.file_for(self.accounts_dir)
 
-    def posta_page(self, s, msg: str = "", err: str = "") -> str:
+    def posta_page(self, s, msg: str = "", err: str = "", cfg=None) -> str:
+        """La pagina Posta. Senza `cfg`: la posta comune a tutti. Con `cfg`: la posta di UN account (se la imposta, vince su quella comune)."""
         from . import posta
-        pc = posta.load(self.posta_file())
         csrf = f'<input type="hidden" name="csrf" value="{H(s["csrf"])}">'
+        comune = posta.load(self.posta_file())
+        if cfg is None:
+            pc, base, scope = comune, "/posta", "comune"
+            altri = [c.slug for c in self.accounts()[0] if posta.own_values(c.profile_dir)]
+        else:
+            own = posta.own_values(cfg.profile_dir)
+            pc = posta.Config(own) if own else comune
+            base, scope = f"/account/{H(cfg.slug)}/posta", ("propria" if own else "comune")
         stato = pill("configurata", "ok") if pc.configured else pill("non configurata")
-        pw = pill("password salvata", "ok") if pc.has_password else pill("nessuna password")
-        form = (f'<form method="post" action="/posta/salva" class="e-form2">{csrf}'
+        pw = pill("password salvata", "ok") if (pc.has_password and (cfg is None or scope == "propria")) else pill("nessuna password")
+        form = (f'<form method="post" action="{base}/salva" class="e-form2">{csrf}'
                 + field("Server di posta (SMTP)", "host", pc.host, "L'indirizzo del server che spedisce. Esempio: <i>mail.tuodominio.it</i>.")
                 + field("Porta", "port", str(pc.port), "Di solito 587 (STARTTLS) oppure 465 (SSL).")
                 + choice("Protezione", "security", [("starttls", "STARTTLS (consigliata, porta 587)"), ("ssl", "SSL/TLS (porta 465)"),
@@ -326,42 +346,72 @@ class Panel:
                 + field("Indirizzo da cui partono le mail", "sender", pc.sender, "Esempio: <i>info@tuodominio.it</i>.")
                 + field("Nome del mittente (facoltativo)", "sender_name", pc.sender_name, "Come compare a chi riceve. Vuoto = il nome dell'account.")
                 + field("Risposte a (facoltativo)", "reply_to", pc.reply_to, "Se vuoi che le risposte arrivino a un altro indirizzo.")
-                + field("Indirizzo pubblico di questo pannello", "public_url", pc.public_url, "Serve al segnale di apertura. Deve iniziare con https://. Esempio: <i>https://edith.tuodominio.it</i>.")
+                + field("Indirizzo pubblico del pannello", "public_url", pc.public_url, "Serve al segnale di apertura. Deve iniziare con https://. Esempio: <i>https://edith.tuodominio.it</i>.")
                 + field("Massimo di mail al giorno", "max_day", str(pc.max_day), "Un freno di sicurezza. Predefinito 20.")
-                + area("Firma (facoltativa)", "firma", pc.firma.replace(chr(10), chr(10)), "Si aggiunge in fondo a ogni mail. Esempio: <i>Le Luna Nera · info@tuodominio.it</i>", 3)
+                + area("Firma (facoltativa)", "firma", pc.firma, "Si aggiunge in fondo a ogni mail. Esempio: <i>Le Luna Nera · info@tuodominio.it</i>", 3)
                 + f'<div class="mt-4"><label class="flex items-start gap-2"><input type="checkbox" name="pixel" value="1"{" checked" if pc.pixel else ""} class="mt-1.5">'
                   f'<span><b>Segui le aperture</b><br><span class="{HELP}">Mette nelle mail un\'immagine invisibile (1 pixel) che dice se la mail è stata aperta. '
                   f'Registra solo l\'ora, mai l\'indirizzo IP né il programma di posta. Serve l\'indirizzo pubblico qui sopra.</span></span></label></div>'
-                + f'<div class="e-actions mt-5">{btn("Salva")}</div></form>')
-        prova = (f'<form method="post" action="/posta/prova">{csrf}<p class="{HELP}">Manda una mail di prova vera: si collega, accede e spedisce. Se qualcosa non va, ti dico cosa.</p>'
+                + f'<div class="e-actions mt-5">{btn("Salva" if cfg is None else "Salva per questo account")}</div></form>')
+        prova = (f'<form method="post" action="{base}/prova">{csrf}<p class="{HELP}">Manda una mail di prova vera: si collega, accede e spedisce. Se qualcosa non va, ti dico cosa.</p>'
                  f'<input class="{INPUT} mt-2" name="to" placeholder="un tuo indirizzo, per esempio nome@esempio.it" required>'
                  f'<div class="mt-3">{btn("Invia la mail di prova")}</div></form>')
         info = ('<ul class="mt-3 list-disc pl-5 text-slate-600 dark:text-slate-300"><li>Il manager <b>prepara</b> la mail e tu la vedi per intero su Telegram: <b>parte solo se premi «Approva»</b>.</li>'
                 '<li>Una persona per mail, mai in copia nascosta. C\'è un limite al giorno e un elenco di indirizzi da non contattare più.</li>'
                 '<li>In fondo a ogni mail c\'è una riga per smettere di ricevere: chi risponde «non scrivermi più» va messo nell\'elenco.</li>'
-                '<li>Le aperture sono indicative: alcuni programmi di posta aprono le immagini da soli, quindi «aperta» non vuol dire sempre «letta».</li>'
-                '<li>Le mail in uscita sono la stessa casella per tutti gli account (puoi cambiare solo il nome del mittente).</li></ul>')
-        body = ('<h1 class="text-2xl font-bold">Posta</h1>'
-                '<p class="mt-2 text-slate-600 dark:text-slate-300">Qui colleghi un server di posta (SMTP), per esempio quello della band. Appena è configurato, il manager può preparare mail per i contatti da scrivere. '
-                f'Stato: {stato}</p>' + flash(msg, err)
-                + card("Server di posta", "Le impostazioni valgono per tutti gli account.", form, "", "", "e-span")
-                + card("Prova", "", prova) + card("Come funziona", "", info))
+                '<li>Le aperture sono indicative: alcuni programmi di posta aprono le immagini da soli, quindi «aperta» non vuol dire sempre «letta».</li></ul>')
+        if cfg is None:
+            nota = (f'<p class="mt-2 text-slate-600 dark:text-slate-300">Qui c\'è la posta <b>comune</b>: la usano tutti gli account, tranne quelli che ne hanno una loro. Stato: {stato}</p>'
+                    + (f'<p class="{HELP}">Hanno una posta propria: {H(", ".join(altri))}.</p>' if altri else ""))
+            body = ('<h1 class="text-2xl font-bold">Posta</h1>' + nota + flash(msg, err)
+                    + card("Posta comune", "Vale per tutti gli account che non hanno una posta propria.", form, "", "", "e-span") + card("Prova", "", prova) + card("Come funziona", "", info))
+        else:
+            if scope == "propria":
+                nota = (f'<p class="mt-2 text-slate-600 dark:text-slate-300">Questo account usa una posta <b>tutta sua</b>: vince su quella comune. Stato: {stato}</p>')
+                togli = card("Tornare alla posta comune", "L'account smette di usare la sua posta e torna a quella comune. Le impostazioni proprie (password compresa) vengono tolte da questo account.",
+                             f'<form method="post" action="{base}/togli">{csrf}<label class="mt-4 flex items-start gap-2"><input type="checkbox" name="conferma" value="si" class="mt-1.5">'
+                             f'<span>Sì, torna alla posta comune</span></label><div class="mt-4">{btn("Torna alla comune", "ghost")}</div></form>')
+            else:
+                nota = ('<p class="mt-2 text-slate-600 dark:text-slate-300">Questo account usa la posta <b>comune</b>'
+                        + (" (già configurata)" if comune.configured else " (non ancora configurata)") + '. Se compili e salvi qui sotto, <b>da quel momento vince la posta propria dell\'account</b>, '
+                        'su tutto: la comune non si usa più per questo account. I campi sono già riempiti con quelli della comune, tranne la password, che va scritta di nuovo.</p>')
+                togli = ""
+            body = (f'<a href="/account/{H(cfg.slug)}" class="text-sm text-indigo-600 hover:underline dark:text-indigo-400">← Torna a {H(cfg.slug)}</a>'
+                    f'<h1 class="mt-2 text-2xl font-bold">Posta di {H(cfg.slug)}</h1>' + nota + flash(msg, err)
+                    + card("Posta propria dell'account", "Se la imposti, vince sempre su quella comune.", form, "", "", "e-span") + card("Prova", "", prova) + togli + card("Come funziona", "", info))
         return page("Posta", body, s["csrf"])
 
-    def do_posta_save(self, form) -> str:
+    def do_posta_save(self, form, cfg=None) -> str:
         from . import posta
-        vals, err = posta.check_settings(form, posta.load(self.posta_file()))
+        if cfg is None:
+            vals, err = posta.check_settings(form, posta.load(self.posta_file()))
+            if err:
+                return err
+            update_env(self.posta_file(), vals)
+            return ""
+        own = posta.own_values(cfg.profile_dir)
+        vals, err = posta.check_settings(form, posta.Config(own))
         if err:
             return err
-        update_env(self.posta_file(), vals)
+        if "SMTP_PASSWORD" not in vals and not own.get("SMTP_PASSWORD") and vals.get("SMTP_USER"):
+            return "Per la posta propria dell'account serve scrivere la password (la comune non si copia da sola)."
+        update_env(os.path.join(cfg.profile_dir, "account.env"), vals)
         return ""
 
-    def do_posta_test(self, form) -> tuple:
+    def do_posta_test(self, form, cfg=None) -> tuple:
         from . import posta
         try:
-            return posta.test_connection(posta.load(self.posta_file()), (form.get("to") or "").strip()), ""
+            pc = posta.resolve(cfg.profile_dir) if cfg is not None else posta.load(self.posta_file())
+            return posta.test_connection(pc, (form.get("to") or "").strip()), ""
         except posta.PostaError as e:
             return "", f"Non riesco a spedire: {e}."
+
+    def do_posta_togli(self, form, cfg) -> str:
+        from . import posta
+        if form.get("conferma") != "si":
+            return "Spunta la casella per confermare."
+        update_env(os.path.join(cfg.profile_dir, "account.env"), {}, remove=posta.CAMPI)
+        return ""
 
     def _own_ai(self, cfg) -> bool:
         return bool(cfgmod.parse_env_file(os.path.join(cfg.profile_dir, "account.env")).get("OMNIROUTE_API_KEY"))
@@ -471,7 +521,7 @@ class Panel:
         cls = "e-navlink"
         badge = f' <span class="rounded-full bg-red-600 px-2 text-xs text-white">{n}</span>' if n else ""
         return (f'<nav><a class="{cls}" href="{a}/estensioni">Estensioni{badge}</a>'
-                f'<a class="{cls}" href="{a}/lezioni">Cosa ha imparato</a><a class="{cls}" href="{a}/archivio">Archivio</a><a class="{cls}" href="{a}/biblioteca">Biblioteca</a><a class="{cls}" href="{a}/esperti">Esperti</a><a class="{cls}" href="{a}/catalogo">Catalogo</a></nav>')
+                f'<a class="{cls}" href="{a}/lezioni">Cosa ha imparato</a><a class="{cls}" href="{a}/archivio">Archivio</a><a class="{cls}" href="{a}/posta">Posta</a><a class="{cls}" href="{a}/biblioteca">Biblioteca</a><a class="{cls}" href="{a}/esperti">Esperti</a><a class="{cls}" href="{a}/catalogo">Catalogo</a></nav>')
 
     def check_page(self, s, cfg) -> str:
         res = ""
@@ -852,7 +902,7 @@ def make_handler(panel: Panel):
             if path == "/posta":
                 return self._send(200, panel.posta_page(s))
             parts = path.strip("/").split("/")
-            if len(parts) >= 3 and parts[0] == "account" and parts[2] in ("estensioni", "lezioni", "catalogo", "esperti", "biblioteca", "archivio"):
+            if len(parts) >= 3 and parts[0] == "account" and parts[2] in ("estensioni", "lezioni", "catalogo", "esperti", "biblioteca", "archivio", "posta"):
                 from . import panel_ext
                 cfg = panel.account(parts[1])
                 if not cfg:
@@ -927,7 +977,7 @@ def make_handler(panel: Panel):
                 ok = bool(panel.control and panel.control.restart_all())
                 return self._send(200, panel.system_page(s, "Riavvio richiesto per tutti gli account: ci vogliono fino a 30 secondi." if ok else "", "" if ok else "Non posso riavviare da qui."))
             parts = path.strip("/").split("/")
-            if len(parts) >= 4 and parts[0] == "account" and parts[2] in ("estensioni", "approvazione", "lezioni", "catalogo", "esperti", "biblioteca", "archivio"):
+            if len(parts) >= 4 and parts[0] == "account" and parts[2] in ("estensioni", "approvazione", "lezioni", "catalogo", "esperti", "biblioteca", "archivio", "posta"):
                 from . import panel_ext
                 cfg = panel.account(parts[1])
                 if not cfg:

@@ -1,6 +1,7 @@
 # Cronologia
 
 ## 0.6 — Biblioteca
+- **Posta propria per account**: ogni account può avere la sua posta (account → Posta) e quella vince sulla comune, per intero e senza mescolare password. L'indirizzo del foglio di stile cambia a ogni aggiornamento, così il browser non resta con la grafica vecchia.
 - **Posta**: pagina «Posta» nel pannello (server SMTP, password mai mostrata, bottone di prova); strumenti `mail_proponi` (la mail parte solo dopo l'approvazione a bottoni), `mail_registro`, `mail_stato`, `mail_non_contattare`; limite giornaliero, elenco dei non contattabili, riga per disiscriversi, segnale di apertura facoltativo (`/t/<codice>.gif`: solo l'ora). `contatto_aggiungi`: se manca un dato lo chiede, non inventa. Vedi [docs/POSTA.md](docs/POSTA.md).
 - **Voce di E.D.I.T.H.** per il bot, di serie (scelta «Come parla»: E.D.I.T.H., neutra o descritta da te). Le regole e l'onestà valgono più dello stile.
 - **Pannello a tutta larghezza** (menu laterale, due colonne, moduli) e tema del visore; screenshot nel README.

@@ -588,8 +588,7 @@ def run_account(cfg, stop=None) -> int:
             return ai.chat(cfg.model_normal, [{"role": "system", "content": system}, {"role": "user", "content": user}], max_tokens=1500)
         return esp.consult(_ask_esperto, eid, richiesta, contesto, spenti=prof.load(db.profile_dir).get("esperti_spenti") or [])
     from . import posta as _posta
-    posta_file = _posta.file_for(os.path.dirname(db.profile_dir) if getattr(db, "profile_dir", "") else cfg.data_dir)
-    posta_cfg = lambda: _posta.load(posta_file)  # riletta a ogni uso: le modifiche dal pannello valgono subito
+    posta_cfg = lambda: _posta.resolve(db.profile_dir)  # la propria dell'account se c'è, altrimenti la comune; riletta a ogni uso
 
     def _invia_mail(db_, a):  # eseguita solo DOPO l'approvazione dei bottoni
         import datetime as _dt

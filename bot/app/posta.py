@@ -46,6 +46,8 @@ def file_for(accounts_dir: str) -> str:
 class Config:
     """Impostazioni della posta (le stesse per tutti gli account)."""
 
+    origin = "comune"  # da dove viene: «account» (propria dell'account), «comune» o «nessuna»
+
     def __init__(self, values: dict = None):
         v = values or {}
         self.host = (v.get("SMTP_HOST") or "").strip()
@@ -82,6 +84,25 @@ class Config:
 
 def load(path: str) -> Config:
     return Config(cfgmod.parse_env_file(path) if os.path.isfile(path) else {})
+
+
+def own_values(profile_dir: str) -> dict:
+    """Le impostazioni di posta scritte nell'account.env di UN account (vuoto se non ne ha)."""
+    own = cfgmod.parse_env_file(os.path.join(profile_dir, "account.env"))
+    return {k: v for k, v in own.items() if k in CAMPI and v != ""} if (own.get("SMTP_HOST") or "").strip() else {}
+
+
+def resolve(profile_dir: str) -> Config:
+    """La posta che un account usa davvero. Se l'account ha la SUA configurazione (SMTP_HOST nel suo account.env) vince quella, per intero:
+    mai mescolata con la comune (così la password della comune non finisce verso il server di un altro). Altrimenti vale la comune."""
+    own = own_values(profile_dir)
+    if own:
+        c = Config(own)
+        c.origin = "account"
+        return c
+    c = load(file_for(os.path.dirname(profile_dir.rstrip("/\\"))))
+    c.origin = "comune" if c.configured else "nessuna"
+    return c
 
 
 def check_settings(form: dict, current: Config) -> tuple:

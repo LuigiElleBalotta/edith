@@ -7,7 +7,14 @@ Il manager può **preparare** mail per i contatti da scrivere (locali, organizza
 2. Inserisci server SMTP, porta, protezione (di solito STARTTLS sulla 587), nome utente, **password**, indirizzo da cui partono le mail (per esempio `info@tuodominio.it`).
 3. Premi **Salva**, poi **Invia la mail di prova** verso un tuo indirizzo. Se qualcosa non va, il pannello dice cosa (password, certificato, porta…).
 
-Le impostazioni valgono per **tutti gli account**; ogni account cambia solo il nome del mittente. La password sta solo nel file `accounts/_posta.env` sul server (permessi 600, mai su Git) e il pannello non la mostra mai. Finché la posta non è configurata, il manager non ha gli strumenti per le mail.
+La posta configurata in **Posta** è la **comune**: la usano tutti gli account. La password sta solo nel file `accounts/_posta.env` sul server (permessi 600, mai su Git) e il pannello non la mostra mai. Finché la posta non è configurata, il manager non ha gli strumenti per le mail.
+
+## Posta propria di un account (vince su tutto)
+Ogni account può avere la **sua** posta: account → **Posta** (menu laterale). Se la salvi, **per quell'account vince sempre su quella comune**, per intero: l'account usa il suo server, il suo utente, la sua password, il suo mittente e il suo limite giornaliero.
+- **Mai mescolata:** se l'account ha un suo server, la password della comune non viene usata con quel server (e non si copia da sola: la scrivi tu).
+- I dati propri stanno nel `account.env` dell'account (permessi 600, mai su Git).
+- Per tornare alla comune: account → Posta → «Torna alla comune» (con conferma). Le impostazioni proprie vengono tolte; tutto il resto dell'account resta com'è.
+- Gli altri account non cambiano. La pagina **Posta** comune elenca quali account hanno una posta propria.
 
 ## Come lavora il manager
 - `contatto_aggiungi`: aggiunge un contatto. Se manca anche **un solo dato** (nome, tipo, zona, canale, email/telefono/handle secondo il canale, link della fonte, priorità, data della prima scrittura) **non salva e te lo chiede**. Non inventa mai i dati.

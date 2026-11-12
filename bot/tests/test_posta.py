@@ -312,6 +312,41 @@ class ContattiTests(unittest.TestCase):
         self.assertEqual(len(self.db.contacts_list()), 1)
 
 
+class OverrideTests(unittest.TestCase):
+    """La posta propria dell'account vince su quella comune (per intero, mai mescolata)."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.acc = os.path.join(self.tmp.name, "accounts")
+        os.makedirs(os.path.join(self.acc, "alfa"))
+        os.makedirs(os.path.join(self.acc, "beta"))
+        for n in ("alfa", "beta"):
+            open(os.path.join(self.acc, n, "account.env"), "w", encoding="utf-8").write("TELEGRAM_BOT_TOKEN=" + TOKEN + "\n")
+        with open(os.path.join(self.acc, posta.FILE_NAME), "w", encoding="utf-8") as f:
+            f.write("SMTP_HOST=comune.esempio.it\nSMTP_PORT=587\nSMTP_USER=comune@esempio.it\nSMTP_PASSWORD=" + SEGRETO + "\nMAIL_FROM=info@esempio.it\n")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_senza_posta_propria_vale_la_comune(self):
+        c = posta.resolve(os.path.join(self.acc, "alfa"))
+        self.assertEqual((c.origin, c.host, c.configured), ("comune", "comune.esempio.it", True))
+
+    def test_con_posta_propria_vince_tutta_e_non_si_mescola(self):
+        with open(os.path.join(self.acc, "alfa", "account.env"), "a", encoding="utf-8") as f:
+            f.write("SMTP_HOST=alfa.esempio.it\nMAIL_FROM=band@alfa.it\n")  # niente utente né password: NON si prendono dalla comune
+        c = posta.resolve(os.path.join(self.acc, "alfa"))
+        self.assertEqual((c.origin, c.host, c.sender), ("account", "alfa.esempio.it", "band@alfa.it"))
+        self.assertEqual((c.user, c.has_password), ("", False))  # la password della comune non finisce verso il server dell'account
+        b = posta.resolve(os.path.join(self.acc, "beta"))
+        self.assertEqual((b.origin, b.host), ("comune", "comune.esempio.it"))  # gli altri account restano sulla comune
+
+    def test_senza_niente_nessuna(self):
+        os.remove(os.path.join(self.acc, posta.FILE_NAME))
+        c = posta.resolve(os.path.join(self.acc, "alfa"))
+        self.assertEqual((c.origin, c.configured), ("nessuna", False))
+
+
 class Ctl:
     events = {}
 
@@ -408,6 +443,48 @@ class PannelloPostaTests(unittest.TestCase):
         st, body = self.post("/posta/prova", {"to": "non-valida"})
         self.assertIn("Non riesco a spedire", body)
         self.assertEqual(len(self.smtp.mails), 1)
+
+    def test_posta_per_account_vince_sulla_comune_e_si_puo_togliere(self):
+        self.login()
+        self.post("/posta/salva", self.form(password=SEGRETO))  # comune
+        env = os.path.join(self.acc, "alfa", "account.env")
+        self.assertIn("(già configurata)", self.req("GET", "/account/alfa/posta")[1].decode())
+        self.assertIn("Posta</a>", self.req("GET", "/account/alfa")[1].decode())  # voce nel menu dell'account
+        self.assertEqual(self.req("POST", "/account/alfa/posta/salva", self.form())[0], 403)  # senza codice anti-CSRF
+        # la password della comune non si copia da sola
+        st, body = self.post("/account/alfa/posta/salva", self.form(user="band@esempio.it", sender="band@esempio.it"))
+        self.assertIn("serve scrivere la password", body)
+        self.assertNotIn("SMTP_HOST", open(env, encoding="utf-8").read())
+        # propria: vince e usa il suo server (la mail di prova arriva al suo, non al comune)
+        propria = FakeSmtp()
+        threading.Thread(target=propria.serve_forever, daemon=True).start()
+        try:
+            st, body = self.post("/account/alfa/posta/salva", self.form(port=str(propria.server_address[1]), sender="band@esempio.it",
+                                                                           user="", password="", sender_name="La band"))
+            self.assertIn("usa la sua posta", body)
+            self.assertIn("tutta sua", self.req("GET", "/account/alfa/posta")[1].decode())
+            st, body = self.post("/account/alfa/posta/prova", {"to": "me@esempio.it"})
+            self.assertIn("Mail di prova partita", body)
+            self.assertEqual((len(propria.mails), len(self.smtp.mails)), (1, 0))
+            self.assertIn("band@esempio.it", email.message_from_bytes(propria.mails[0][2])["From"])
+            from app import posta as P
+            self.assertEqual(P.resolve(os.path.join(self.acc, "alfa")).origin, "account")
+            # il pannello comune elenca gli account con posta propria; la password comune non è nell'account
+            self.assertIn("alfa", self.req("GET", "/posta")[1].decode())
+            self.assertNotIn(SEGRETO, open(env, encoding="utf-8").read())
+            # tornare alla comune: serve la conferma
+            st, body = self.post("/account/alfa/posta/togli", {})
+            self.assertIn("Spunta", body)
+            self.assertIn("SMTP_HOST", open(env, encoding="utf-8").read())
+            st, body = self.post("/account/alfa/posta/togli", {"conferma": "si"})
+            self.assertIn("torna a usare la posta comune", body)
+            self.assertNotIn("SMTP_HOST", open(env, encoding="utf-8").read())
+            self.assertIn("TELEGRAM_BOT_TOKEN", open(env, encoding="utf-8").read())  # il resto dell'account.env non si tocca
+            self.assertEqual(P.resolve(os.path.join(self.acc, "alfa")).origin, "comune")
+        finally:
+            propria.shutdown()
+            propria.server_close()
+        self.assertEqual(self.req("GET", "/account/nessuno/posta")[0], 404)
 
     def test_pixel_senza_accesso_conta_solo_codici_veri(self):
         db = Db(os.path.join(self.data, "alfa"))

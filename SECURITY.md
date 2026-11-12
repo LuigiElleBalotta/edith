@@ -60,6 +60,7 @@ Report, ricerca opportunità e piano partono da soli ma fanno solo due cose: leg
 ## Posta (mail in uscita)
 Vedi [docs/POSTA.md](docs/POSTA.md).
 - **Ogni mail passa dall'approvazione a bottoni del proprietario**, con anteprima completa: il manager non può inviare da solo (`approvals.py`, hook `invio_mail`). Test: `bot/tests/test_posta.py`.
+- **Posta per account:** se un account ha la sua configurazione (SMTP_HOST nel suo `account.env`) vince quella, per intero; la password comune non si usa mai verso il server di un altro e non si copia da sola.
 - **Password SMTP** solo in `accounts/_posta.env` (600, mai su Git, mai mostrata, mai nei log o negli errori). Connessione cifrata con certificato verificato; «nessuna cifratura» solo verso la rete interna.
 - **Niente intestazioni iniettate** (a capo vietati in nome, oggetto, indirizzi), una persona per mail, limite giornaliero, elenco dei non contattabili ricontrollato all'invio.
 - **Segnale di apertura**: un'immagine 1×1 su `/t/<codice>.gif` (l'unica rotta senza accesso); registra solo l'ora, risponde sempre allo stesso modo anche con codici falsi, non scrive niente se il codice non esiste. Informativa e consenso restano una decisione del proprietario.

@@ -513,6 +513,8 @@ def get(panel, s, cfg, parts, query):
                 return 200, experts_page(panel, s, cfg, db)
             if parts == ["biblioteca"]:
                 return 200, library_page(panel, s, cfg, db)
+            if parts == ["posta"]:
+                return 200, panel.posta_page(s, cfg=cfg)
             if parts == ["archivio"]:
                 return 200, archive_page(panel, s, cfg)
             if parts == ["archivio", "modifica"]:
@@ -541,6 +543,19 @@ def post(panel, s, cfg, parts, form, files=None):
                 return 200, lessons_page(panel, s, cfg, db, msg="Fatto.")
             if len(parts) == 2 and parts[0] == "archivio":
                 return _archive_action(panel, s, cfg, db, parts[1], form)
+            if len(parts) == 2 and parts[0] == "posta" and parts[1] in ("salva", "prova", "togli"):
+                if parts[1] == "salva":
+                    err = panel.do_posta_save(form, cfg)
+                    if not err:
+                        db.audit("proprietario", "posta_account_salvata", "")
+                    return 200, panel.posta_page(s, "" if err else "Salvato: da ora questo account usa la sua posta. Se hai cambiato password o server, fai la prova qui sotto.", err, cfg=cfg)
+                if parts[1] == "prova":
+                    msg, err = panel.do_posta_test(form, cfg)
+                    return 200, panel.posta_page(s, msg, err, cfg=cfg)
+                err = panel.do_posta_togli(form, cfg)
+                if not err:
+                    db.audit("proprietario", "posta_account_tolta", "")
+                return 200, panel.posta_page(s, "" if err else "Fatto: questo account torna a usare la posta comune.", err, cfg=cfg)
             if parts and parts[0] == "biblioteca":
                 return _lib_action(panel, s, cfg, db, parts, form, files or {})
             if len(parts) == 3 and parts[0] == "esperti" and parts[2] in ("accendi", "spegni"):

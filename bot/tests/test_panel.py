@@ -122,6 +122,8 @@ class PanelTests(unittest.TestCase):
         self.assertGreater(len(body), 2000)
         self.assertEqual(self.c.req("GET", "/static/panel.css", host="evil.example.com")[0], 421)
         csp = self.c.req("GET", "/login")[2].getheader("Content-Security-Policy")
+        self.assertIn('/static/panel.css?v=' + panel.CSS_VERSION, self.c.req("GET", "/login")[1])  # l'indirizzo cambia a ogni aggiornamento del foglio di stile
+        self.assertEqual(self.c.req("GET", "/static/panel.css?v=" + panel.CSS_VERSION)[0], 200)
         self.assertIn("style-src 'self'", csp)
         self.assertNotIn("unsafe-inline", csp)
         self.assertNotIn("<script", self.c.req("GET", "/login")[1])
