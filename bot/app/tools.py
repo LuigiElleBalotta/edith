@@ -1,4 +1,6 @@
-"""Strumenti che il manager può usare durante la conversazione. Tutti in SOLA LETTURA.
+"""Strumenti che il manager può usare durante la conversazione. Quelli fissi sono in SOLA LETTURA;
+in più ci sono le ESTENSIONI dichiarative che il proprietario ha approvato (vedi extensions.py): leggono da siti approvati,
+tengono dati propri e avvisano il proprietario, mai di più.
 
 Regole:
 - niente scritture su Instagram, niente messaggi a terzi (restano dietro approvazione del proprietario);
@@ -16,6 +18,8 @@ import urllib.parse
 import urllib.request
 
 from . import db as db_mod
+from . import extensions as ext_mod
+from .extensions import ExtError
 from .instagram import IgError
 
 MAX_TEXT = 40000  # tetto di sicurezza, non un taglio abituale: i dati devono arrivare interi al modello
@@ -484,14 +488,49 @@ SPECS = [
         "name": "data_ora",
         "description": "Data, ora e giorno della settimana attuali in Italia. Usalo prima di calcolare scadenze, 'domani', 'tra una settimana'.",
         "parameters": {"type": "object", "properties": {}}}},
+    {"type": "function", "function": {
+        "name": "lezione_salva",
+        "description": "Annota una COSA IMPARATA dall'uso (una preferenza, un errore da non ripetere, «qui funziona meglio così»), con cosa l'ha fatta nascere. "
+                       "Usalo quando noti uno schema o il proprietario ti corregge. Se la lezione è già nota aumenta le ripetizioni; se il proprietario ha detto di non riproporla, NON si salva. "
+                       "Non cambia nessuna regola: per quello serve regola_proponi (e il suo sì).",
+        "parameters": {"type": "object", "properties": {"testo": {"type": "string", "description": "la lezione, in una frase"},
+                                                        "fonte": {"type": "string", "description": "cosa l'ha fatta nascere (breve)"}}, "required": ["testo"]}}},
+    {"type": "function", "function": {
+        "name": "lezioni_leggi",
+        "description": "Legge le lezioni annotate. stato: vuoto = tutte (tranne quelle scartate per sempre), 'da_riproporre' = nuove o rifiutate da abbastanza tempo.",
+        "parameters": {"type": "object", "properties": {"stato": {"type": "string", "enum": ["", "da_riproporre", "nuova", "proposta", "adottata", "rifiutata"]}}}}},
+    {"type": "function", "function": {
+        "name": "regola_proponi",
+        "description": "Proponi al proprietario una REGOLA PER TE (aggiungere, sostituire o togliere una regola extra), con i bottoni Approva / Rifiuta / Cambia / Non riproporre più. "
+                       "Non cambia nulla finché non approva. Collega la lezione che l'ha ispirata (lezione_id). Non riproporre una regola rifiutata da poco o scartata per sempre.",
+        "parameters": {"type": "object", "properties": {
+            "azione": {"type": "string", "enum": ["aggiungi", "sostituisci", "rimuovi"]},
+            "regola": {"type": "string", "description": "il testo della regola (nuova)"},
+            "sostituisce": {"type": "string", "description": "il testo ESATTO della regola attuale da sostituire o togliere"},
+            "lezione_id": {"type": "integer"}}, "required": ["azione"]}}},
+    {"type": "function", "function": {
+        "name": "estensione_formato",
+        "description": "Spiega il formato delle ESTENSIONI (funzioni nuove che puoi proporre: dati propri con pagina nel pannello, timer, lettura di API, programmi). "
+                       "Leggilo PRIMA di proporne una.",
+        "parameters": {"type": "object", "properties": {}}}},
+    {"type": "function", "function": {
+        "name": "estensione_proponi",
+        "description": "Proponi una nuova estensione (o una modifica) al proprietario. Si attiva SOLO se approva. Passa il manifest come testo JSON (formato: estensione_formato). "
+                       "Proponila quando vedi che serve davvero (il proprietario chiede spesso la stessa cosa, ha bisogno di un archivio o di un timer). Se rifiutata o 'non riproporre più', non insistere.",
+        "parameters": {"type": "object", "properties": {"manifest": {"type": "string", "description": "il manifest JSON"}}, "required": ["manifest"]}}},
+    {"type": "function", "function": {
+        "name": "estensioni_elenco",
+        "description": "Elenca le estensioni dell'account: attive, spente, in attesa di approvazione.",
+        "parameters": {"type": "object", "properties": {}}}},
 ]
 
 
 class Tools:
     def __init__(self, db, ig=None, browser_url: str = "", browser_token: str = "",
-                 fetch=fetch_public, render=render_with_browser, search=None, to_png=svg_to_png, kb=None, disabled=()):
+                 fetch=fetch_public, render=render_with_browser, search=None, to_png=svg_to_png, kb=None, disabled=(), ext=None):
         self.db, self.ig, self.search = db, ig, search
         self.kb, self.disabled = kb, set(disabled or ())
+        self.ext = ext  # esecutore delle estensioni approvate (None = funzione spenta)
         self._to_png = to_png
         self.images = []  # (png, didascalia): le consegna chi ha in mano Telegram
         self.proposals = []  # id di bozze in attesa: chi ha in mano Telegram manda i bottoni
@@ -515,6 +554,8 @@ class Tools:
         out = [s for s in SPECS if s["function"]["name"] not in ("web_browser", "grafico") or self.browser_url]
         out = [s for s in out if self.ig or not s["function"]["name"].startswith("instagram_")]  # storico_account: sempre
         out = [s for s in out if self.kb or not s["function"]["name"].startswith("kb_")]
+        out = [s for s in out if self.ext or not s["function"]["name"].startswith("estension")]
+        out += self.ext.specs() if self.ext else []  # strumenti delle estensioni approvate e attive
         return [s for s in out if s["function"]["name"] not in self.disabled]  # strumenti spenti dal profilo dell'account
 
     def run(self, name: str, args) -> str:
@@ -525,11 +566,15 @@ class Tools:
                     args = json.loads(args or "{}")
                 except ValueError:
                     return "Errore: argomenti non validi (probabilmente troppo lunghi e tagliati). Riprova con meno dati per volta."
+            if name.startswith("x_"):  # strumento di un'estensione approvata
+                if self.ext and name not in self.disabled and self.ext.owns(name):
+                    return self.ext.run(name, args)[:MAX_TEXT]
+                return "Strumento non disponibile."
             fn = getattr(self, "t_" + name, None)
             if fn is None or name not in {s["function"]["name"] for s in self.specs}:
                 return "Strumento non disponibile."
             return fn(**(args or {}))[:MAX_TEXT]
-        except (ToolError, IgError) as e:
+        except (ToolError, IgError, ExtError) as e:
             return f"Errore: {e}"
         except Exception as e:
             return f"Errore inatteso nello strumento: {type(e).__name__}"
@@ -721,6 +766,96 @@ class Tools:
         tid = self.db.task_add(when.isoformat(timespec="minutes"), str(istruzione)[:1500])
         self.db.audit("manager", "attivita_programmata_futura", f"#{tid} {when.isoformat(timespec='minutes')}")
         return f"Attività #{tid} programmata per {when.strftime('%d/%m/%Y %H:%M')}."
+
+    # --- lezioni, regole proposte, estensioni: il bot PROPONE, il proprietario decide ---
+    def t_lezione_salva(self, testo, fonte=""):
+        t = str(testo).strip()
+        if len(t) < 8:
+            raise ToolError("lezione troppo corta")
+        lid, stato, nuova = self.db.lesson_add(t, str(fonte))
+        if stato == "mai_piu":
+            return "Il proprietario ha detto di non riproporre questa lezione: lasciala stare."
+        self.db.audit("manager", "lezione_salvata" if nuova else "lezione_ripetuta", f"#{lid}")
+        return f"Lezione #{lid} {'salvata' if nuova else 'già nota: ho contato una ripetizione in più'} (stato: {stato})."
+
+    def t_lezioni_leggi(self, stato=""):
+        rows = self.db.lessons_list(stato, 30)
+        if not rows:
+            return "Nessuna lezione."
+        import datetime as dt
+        out = []
+        for r in rows:
+            quando = ""
+            if r["stato"] == "rifiutata" and r["riproponi_dopo"]:
+                quando = f", riproponibile dal {dt.datetime.fromtimestamp(r['riproponi_dopo']).strftime('%d/%m/%Y')}"
+            out.append(f"#{r['id']} [{r['stato']}{quando}] x{r['ripetizioni']}: {r['testo']}")
+        return "\n".join(out)
+
+    def t_regola_proponi(self, azione, regola="", sostituisce="", lezione_id=None):
+        import time as _t
+        from . import approvals, profile as prof
+        if azione not in ("aggiungi", "sostituisci", "rimuovi"):
+            raise ToolError("azione non valida: aggiungi, sostituisci o rimuovi")
+        regola, sostituisce = str(regola or "").strip()[:400], str(sostituisce or "").strip()[:400]
+        attuali = prof.load(self.db.profile_dir).get("regole_extra") or []
+        low = [r.strip().lower() for r in attuali]
+        if azione in ("aggiungi", "sostituisci") and len(regola) < 8:
+            raise ToolError("scrivi il testo della regola")
+        if azione in ("sostituisci", "rimuovi") and sostituisce.lower() not in low:
+            raise ToolError("la regola da cambiare non c'è: copia il testo esatto da quelle attuali")
+        if azione == "aggiungi" and regola.lower() in low:
+            raise ToolError("questa regola c'è già")
+        lez = None
+        if lezione_id is not None:
+            lez = self.db.lesson_get(int(lezione_id))
+            if lez is None:
+                raise ToolError("lezione sconosciuta")
+            if lez["stato"] == "mai_piu":
+                raise ToolError("il proprietario ha detto di non riproporre questa lezione")
+            if lez["stato"] == "proposta":
+                raise ToolError("questa lezione è già stata proposta: aspetta la risposta")
+            if lez["stato"] == "adottata":
+                raise ToolError("questa lezione è già una regola")
+            if lez["stato"] == "rifiutata" and (lez["riproponi_dopo"] or 0) > _t.time():
+                import datetime as dt
+                raise ToolError(f"il proprietario l'ha rifiutata da poco: riproponila dopo il {dt.datetime.fromtimestamp(lez['riproponi_dopo']).strftime('%d/%m/%Y')}")
+        cambia = {"aggiungi": f"AGGIUNGO: «{regola}»", "sostituisci": f"SOSTITUISCO «{sostituisce}» CON «{regola}»", "rimuovi": f"TOLGO: «{sostituisce}»"}[azione]
+        prima = "\n".join(f"• {r}" for r in attuali[:10]) or "(nessuna regola extra)"
+        testo = f"Regole extra di adesso:\n{prima}\n\nProposta: {cambia}" + (f"\n\nPerché: {lez['testo']}" if lez else "")
+        aid = approvals.create(self.db, "modifica_profilo", "Nuova regola per il manager", testo,
+                               extra={"azione": azione, "nuovo": regola, "vecchio": sostituisce, "lezione": lez["id"] if lez else None})
+        if lez:
+            self.db.lesson_set(lez["id"], "proposta")
+        self.proposals.append(aid)
+        self.db.audit("manager", "regola_proposta", f"approvazione #{aid}")
+        return f"Proposta #{aid} inviata al proprietario con i bottoni. Non cambia nulla finché non approva."
+
+    def t_estensione_formato(self):
+        return ext_mod.FORMATO
+
+    def t_estensione_proponi(self, manifest):
+        try:
+            m = json.loads(manifest) if isinstance(manifest, str) else manifest
+        except ValueError:
+            raise ToolError("il manifest non è un JSON valido")
+        aid = ext_mod.propose(self.db, m, origine="proposta dal manager")  # ExtError -> messaggio chiaro
+        self.proposals.append(aid)
+        return f"Proposta #{aid} inviata al proprietario (Telegram e pannello). L'estensione NON è attiva finché non approva."
+
+    def t_estensioni_elenco(self):
+        store = ext_mod.store_for(self.db)
+        ids = store.ids()
+        if not ids:
+            return "Nessuna estensione."
+        out = []
+        for i in ids:
+            m = store.manifest(i)
+            if m:
+                st = store.state(i)
+                out.append(f"{i} «{m['nome']}» v{st['versione']} {'attiva' if st['attiva'] else 'spenta'}" + (" (c'è una modifica in attesa)" if store.pending(i) else ""))
+            elif store.pending(i):
+                out.append(f"{i}: in attesa di approvazione")
+        return "\n".join(out) or "Nessuna estensione."
 
     # --- conferme del proprietario: servono per sbloccare o registrare decisioni sue ---
     @staticmethod

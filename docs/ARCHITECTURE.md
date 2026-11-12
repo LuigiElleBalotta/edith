@@ -8,7 +8,7 @@ Tu (Telegram) ⇄ Telegram ⇄  account A  (thread: bot, SQLite, profilo, token 
 Tu (Telegram) ⇄ Telegram ⇄  account B  (thread: bot, SQLite, profilo, token Instagram)   ⇄ servizio IA (OpenAI-compatibile)
                        │     browser interno  (127.0.0.1, token casuale, Chromium solo a richiesta)  │
                        └──────────────────────────────────────────────────────────────────────────┘
-                            ./data/<nome>/  ·  ./accounts/<nome>/      (volumi, fuori dal contenitore)
+                            ./data/<nome>/  ·  ./accounts/<nome>/  ·  ./estensioni/<nome>/      (volumi, fuori dal contenitore)
 ```
 
 ## Perché un server e non il PC
@@ -30,6 +30,8 @@ Un programma sul PC non può rispondere a Telegram quando il PC è spento. Il bo
 | `kb.py` | archivio di conoscenza (git): lettura, ricerca, modifiche solo con approvazione |
 | `tg.py` | client Telegram, libreria standard |
 | `browser_service.py` | Chromium a richiesta per leggere pagine e disegnare grafici |
+| `extensions.py` | estensioni: validazione dei manifest, archivio su disco (`./estensioni`), esecuzione dei passi, timer, programmi, approvazioni, catalogo |
+| `panel.py`, `panel_ext.py`, `logbuf.py` | pannello web (account, personalità, chiavi, stato e registro) e pagine delle estensioni, delle lezioni e del catalogo |
 
 Nessuna dipendenza esterna: solo libreria standard di Python.
 

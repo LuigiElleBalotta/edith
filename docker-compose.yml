@@ -14,6 +14,7 @@ services:
     volumes:
       - ./data:/data                                    # database, file temporanei, copie di sicurezza (uno per account)
       - ./accounts:/config/accounts                     # account.env (chmod 600), profile.json, chiave dell'archivio
+      - ./estensioni:/extensions                        # estensioni create dal bot (FUORI dall'immagine: si copiano e sopravvivono agli aggiornamenti)
     mem_limit: 1g                                       # il bot usa ~20 MB per account; il resto serve solo se Chromium legge una pagina
     memswap_limit: 1g
     cpus: 1.5

@@ -12,6 +12,10 @@ Un'interfaccia da browser per fare le stesse cose di `./manager`, senza toccare 
 
 Ogni campo ha sotto una riga che spiega a cosa serve, con un esempio.
 
+- **Estensioni** (dentro ogni account): elenco, pagina di ciascuna con impostazioni e tabelle modificabili, «Da approvare» (le proposte del manager), spegni/accendi, versioni, «Esegui ora». Vedi [ESTENSIONI.md](ESTENSIONI.md).
+- **Cosa ha imparato**: le lezioni del manager e le sue proposte di regole; «Non riproporre più».
+- **Catalogo**: estensioni già pronte, da proporre a te stesso per l'approvazione.
+
 ## Accenderlo
 Si accende solo se in `.env` c'è `PANEL_PASSWORD` (almeno 12 caratteri). `./setup.sh` ne genera una e te la mostra una volta; sta anche in `.env`, dove puoi cambiarla. Dopo la modifica: `./manager restart`.
 

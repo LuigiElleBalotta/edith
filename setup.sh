@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 command -v docker >/dev/null || { echo "Serve Docker: https://docs.docker.com/engine/install/"; exit 1; }
 docker compose version >/dev/null 2>&1 || { echo "Serve Docker Compose (plugin 'docker compose')."; exit 1; }
 
-mkdir -p data accounts
+mkdir -p data accounts estensioni
 chmod 700 accounts
 
 # scrive CHIAVE=valore nel .env senza interpretare caratteri speciali (|, &, \ ...)

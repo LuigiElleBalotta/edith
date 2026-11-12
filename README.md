@@ -12,6 +12,7 @@
 - **Cerca opportunità** (concorsi, bandi, festival) con fonte e data, e manda un **report settimanale**.
 - **Segue artisti simili e concorrenti** (profili pubblici professionali) e li confronta nel tempo, con grafici.
 - **Usa un archivio di conoscenza** (un tuo repository Git) come memoria di lungo periodo: lo legge e propone modifiche, che si salvano solo dopo la tua approvazione.
+- **Impara e si estende, solo con il tuo OK**: annota cosa impara e propone regole; può proporre **estensioni** (un ricettario con la sua pagina, timer, meteo da API…) che vivono fuori dal contenitore. Niente si attiva senza approvazione. Vedi [docs/ESTENSIONI.md](docs/ESTENSIONI.md).
 - **Funziona in gruppo** (una band, due soci): ognuno abilitato, tutti vedono cosa fa il manager.
 
 ## Per quali account
@@ -45,7 +46,8 @@ Per aggiungere altri account, in qualsiasi momento (parte da solo, senza riavvia
 ## Documentazione
 - [docs/SETUP.md](docs/SETUP.md): **la guida completa, dall'inizio alla fine** (server, servizio IA, bot, Instagram, pannello in HTTPS, aggiornamenti, problemi comuni).
 - [docs/GUIDARE-L-UTENTE.md](docs/GUIDARE-L-UTENTE.md): per chi aiuta qualcuno a installarlo (anche un assistente IA): come condurlo, cosa fa chi e cosa non va mai fatto.
-- [docs/PIANO-STRUMENTI.md](docs/PIANO-STRUMENTI.md): **proposta in corso**: un assistente che impara e si costruisce da solo le «estensioni» (dati, pagine nel pannello, timer, API), sempre con la tua approvazione.
+- [docs/ESTENSIONI.md](docs/ESTENSIONI.md): le estensioni e le lezioni: come funzionano, come si approvano, formato del manifest.
+- [docs/PIANO-STRUMENTI.md](docs/PIANO-STRUMENTI.md): il piano e le decisioni dietro le estensioni.
 - [CLAUDE.md](CLAUDE.md): regole e mappa del codice per assistenti IA e per chi sviluppa.
 - [docs/ACCOUNTS.md](docs/ACCOUNTS.md): più account, personalità (`profile.json`), gruppo condiviso, archivio di conoscenza, promemoria contatti.
 - [docs/PANEL.md](docs/PANEL.md): il pannello web di configurazione (solo da localhost, con password).

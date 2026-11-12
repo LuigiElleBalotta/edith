@@ -189,8 +189,10 @@ def system_info():
 
 class Panel:
     def __init__(self, password: str, accounts_dir: str, data_root: str, env: dict = None, control=None, checks: dict = None,
-                 allowed_hosts=None):
+                 allowed_hosts=None, ext_root: str = None, ext_ask=None, ext_fetch=None):
         self.accounts_dir, self.data_root = accounts_dir, data_root
+        self.ext_root = ext_root or (env or os.environ).get("EXTENSIONS_DIR", "/extensions")  # estensioni: FUORI dal contenitore
+        self.ext_ask, self.ext_fetch = ext_ask, ext_fetch  # (solo per i test) IA e rete simulate
         self.env = dict(os.environ if env is None else env)
         self.control = control
         self.checks = {"telegram": accounts.check_telegram, "owner": accounts.wait_owner, "ai": accounts.check_ai,
@@ -320,10 +322,11 @@ class Panel:
                f'<div class="mt-2 flex items-center gap-3"><h1 class="text-2xl font-bold">{H(cfg.slug)}</h1>{pill("attivo", "ok") if on else pill("fermo", "no")}</div>'
                f'<p class="mt-1 text-slate-600 dark:text-slate-300">{bot}</p>'
                '<nav class="mt-4 flex flex-wrap gap-2 text-sm">'
-               + "".join(f'<a href="#{i}" class="rounded-full border border-slate-300 px-3 py-1 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800">{t}</a>' for i, t in sezioni) + "</nav>")
+               + "".join(f'<a href="#{i}" class="rounded-full border border-slate-300 px-3 py-1 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800">{t}</a>' for i, t in sezioni) + "</nav>"
+               + self._ext_links(cfg))
         personalita = card("Personalità", "Come parla il manager e cosa conta per questo account. <b>Le modifiche valgono subito</b>, senza riavviare.",
             f'<form method="post" action="{a}/profile">{csrf}'
-            + field("Come ti chiama il manager", "proprietario", p.get("proprietario", ""), "Il nome con cui si rivolge a te. Esempio: <i>Luigi</i>.")
+            + field("Come ti chiama il manager", "proprietario", p.get("proprietario", ""), "Il nome con cui si rivolge a te. Esempio: <i>Marta</i>.")
             + area("Chi è il manager e per chi lavora", "identita", p.get("identita", ""), "Una descrizione libera. Se la scrivi, sostituisce la presentazione di base; le regole di sicurezza restano sempre. Esempio: <i>Sei il manager social di una band indie di Milano…</i>")
             + area("Regole in più", "regole_extra", chr(10).join(p.get("regole_extra") or []), "Una regola per riga. Esempio: <i>Non proporre mai collaborazioni a pagamento.</i>")
             + field("Cosa conta come pertinente", "ambito", p.get("ambito", ""), "Serve a scegliere cosa tenere quando riceve contenuti. Vuoto = musica. Esempio: <i>cucina e ricette</i>.")
@@ -351,6 +354,16 @@ class Panel:
             f'<form method="post" action="{a}/remove">{csrf}<label class="mt-4 flex items-start gap-2"><input type="checkbox" name="conferma" value="si" class="mt-1.5">'
             f'<span>Sì, voglio mettere da parte «{H(cfg.slug)}»</span></label><div class="mt-4">{btn("Metti da parte", "danger")}</div></form>', "", "danger")
         return page(cfg.slug, top + flash(msg, err) + personalita + proprietari + collegamenti + gestione + pericolo, s["csrf"])
+
+    def _ext_links(self, cfg) -> str:
+        """Collegamenti alle estensioni, a «Cosa ha imparato» e al catalogo, con il numero di proposte da approvare."""
+        from . import panel_ext
+        n = panel_ext.pending_count(self, cfg)
+        a = f"/account/{H(cfg.slug)}"
+        cls = "rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1 font-medium text-indigo-800 hover:bg-indigo-100 dark:border-indigo-700 dark:bg-indigo-950 dark:text-indigo-200"
+        badge = f' <span class="rounded-full bg-red-600 px-2 text-xs text-white">{n}</span>' if n else ""
+        return (f'<nav class="mt-3 flex flex-wrap gap-2 text-sm"><a class="{cls}" href="{a}/estensioni">Estensioni{badge}</a>'
+                f'<a class="{cls}" href="{a}/lezioni">Cosa ha imparato</a><a class="{cls}" href="{a}/catalogo">Catalogo</a></nav>')
 
     def check_page(self, s, cfg) -> str:
         res = ""
@@ -511,7 +524,7 @@ class Panel:
             return page("Nuovo account", head(1, "Chi è") + f(btn("Avanti", name="go"),
                 field("Nome dell'account", "nome", "", "Una persona, una band, un'attività. Esempio: <i>Luna Rossa</i>.", required=True)
                 + field("Nome breve per i file (facoltativo)", "slug", "", "Solo minuscole, numeri e trattini. Se lo lasci vuoto lo scelgo io. Esempio: <i>luna-rossa</i>.")
-                + field("Come ti deve chiamare il manager", "proprietario", "", "Esempio: <i>Luigi</i>.")
+                + field("Come ti deve chiamare il manager", "proprietario", "", "Esempio: <i>Marta</i>.")
                 + field("Una frase su chi sei e cosa fai (facoltativo)", "descrizione", "", "Aiuta il manager a capire il contesto. Esempio: <i>band indie di Milano</i>."),
                 "", "Per iniziare servono solo un nome e come vuoi essere chiamato. Il resto si può cambiare dopo."), s["csrf"])
         if step == "token":
@@ -683,6 +696,13 @@ def make_handler(panel: Panel):
             if path == "/system":
                 return self._send(200, panel.system_page(s))
             parts = path.strip("/").split("/")
+            if len(parts) >= 3 and parts[0] == "account" and parts[2] in ("estensioni", "lezioni", "catalogo"):
+                from . import panel_ext
+                cfg = panel.account(parts[1])
+                if not cfg:
+                    return self._send(404, page("Non trovato", "<h1>Account non trovato</h1>", s["csrf"]))
+                code, html_ = panel_ext.get(panel, s, cfg, parts[2:], urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query))
+                return self._send(code, html_)
             if len(parts) == 2 and parts[0] == "account":
                 cfg = panel.account(parts[1])
                 return self._send(200, panel.account_page(s, cfg)) if cfg else self._send(404, page("Non trovato", "<h1>Account non trovato</h1>", s["csrf"]))
@@ -719,6 +739,13 @@ def make_handler(panel: Panel):
                 ok = bool(panel.control and panel.control.restart_all())
                 return self._send(200, panel.system_page(s, "Riavvio richiesto per tutti gli account: ci vogliono fino a 30 secondi." if ok else "", "" if ok else "Non posso riavviare da qui."))
             parts = path.strip("/").split("/")
+            if len(parts) >= 4 and parts[0] == "account" and parts[2] in ("estensioni", "approvazione", "lezioni", "catalogo"):
+                from . import panel_ext
+                cfg = panel.account(parts[1])
+                if not cfg:
+                    return self._send(404, page("Non trovato", "<h1>Account non trovato</h1>", s["csrf"]))
+                code, html_ = panel_ext.post(panel, s, cfg, parts[2:], form)
+                return self._send(code, html_)
             if len(parts) == 3 and parts[0] == "account":
                 cfg = panel.account(parts[1])
                 if not cfg:

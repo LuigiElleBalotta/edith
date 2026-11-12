@@ -8,7 +8,7 @@ Apri una *Security advisory* privata nel repository (scheda Security) invece di 
 ## Cosa non può fare, per costruzione
 - **Nessuna scrittura su Instagram.** Nel codice non esiste nessuna azione che pubblica, commenta, risponde o scrive messaggi. Anche se il token avesse quei permessi, il programma non ha le funzioni per usarli.
 - **Nessun contatto con terzi.** Prepara bozze di messaggi, candidature e risposte: si usano a mano. Segnare qualcosa come «inviato» o «pubblicato» vale solo con il bottone **Fatto** o con parole vere del proprietario (la frase citata deve comparire negli ultimi 8 messaggi della chat: un lavoro automatico non può quindi sbloccare nulla).
-- **Nessuna azione senza approvazione.** Ogni proposta si decide una volta sola, con i bottoni, e solo da un proprietario.
+- **Nessuna azione senza approvazione.** Ogni proposta si decide una volta sola, con i bottoni (o dal pannello con password), e solo da un proprietario.
 
 ## Chi può usarlo
 - Solo i proprietari dell'account (ID Telegram in `account.env`, più chi un proprietario abilita con `/abilita`). Gli altri sono ignorati in silenzio e registrati (`accesso_negato`).
@@ -56,6 +56,21 @@ Si leggono solo file di testo. Mai letti né scritti: `secrets/`, `.env`, chiavi
 
 ## Lavori automatici
 Report, ricerca opportunità e piano partono da soli ma fanno solo due cose: leggere (Instagram, web) e scrivere al proprietario su Telegram, in silenzio. Limiti: 20 attività in attesa (entro 60 giorni), 5 domande in coda, una domanda ogni 20 ore e solo tra le 10 e le 20, al massimo 3 promemoria contatti al giorno. Se un lavoro fallisce 3 volte nella settimana rinuncia. `/pausa` ferma tutto.
+
+## Estensioni create dal bot
+Il bot può **proporre** estensioni (dati propri, timer, lettura di API, pagine nel pannello), ma **non può attivarle**: servono il bottone su Telegram o il pulsante nel pannello, da un proprietario. Vedi [docs/ESTENSIONI.md](docs/ESTENSIONI.md).
+- **Niente codice.** Un'estensione è un manifest JSON con passi fissi; non c'è `exec`, né `eval`, né import di moduli. Il validatore rifiuta voci sconosciute.
+- **Solo lettura verso l'esterno.** I passi di rete sono solo `GET`, verso **domini dichiarati e approvati**, con controllo a ogni reindirizzamento e solo indirizzi pubblici (stessa protezione del web normale). Non esiste nessun `POST` né invio di messaggi a terzi; l'unico messaggio possibile è a **te**.
+- **Il riepilogo prima dell'OK** mostra siti, permessi, dati e timer; per una modifica evidenzia nuovi siti e nuovi permessi. Il manifest completo è visibile nel pannello.
+- **Il pannello disegna, il bot descrive.** Nessun HTML o JavaScript dal bot: ogni testo del manifest e ogni dato passa da escape; le scritture sono validate contro i tipi e hanno il codice anti-CSRF.
+- **Segreti:** il manifest non li legge; si usano solo come `{segreto:chiave}` nelle intestazioni verso un dominio approvato, e stanno in `account.env`.
+- **Isolamento:** ogni account ha la sua cartella (`./estensioni/<account>/`); il nome dell'account e l'id dell'estensione sono validati (niente percorsi ostili).
+- **Reversibile:** ogni versione approvata si conserva; si può spegnere o tornare indietro; i dati non si cancellano da soli.
+- **«Non riproporre più»** ferma per sempre una proposta (estensione o regola).
+- **Limite onesto:** un'estensione approvata con un dominio sbagliato potrebbe inviarci dati *dentro un indirizzo* (per esempio i parametri di una ricerca). Per questo i domini sono in primo piano nell'approvazione: controllali.
+- Non esiste (ancora) l'esecuzione di codice scritto dal bot: se un giorno servirà, andrà in un contenitore separato, senza chiavi e senza rete libera.
+
+Anche le **regole proposte dal bot** per sé (lezioni) cambiano solo `regole_extra` del profilo, solo dopo approvazione, e mai utenti, chiavi o archivio.
 
 ## Dati e copie
 Copia giornaliera del database in `data/<nome>/backups` (ultime 7). **Sta sullo stesso disco**: fai anche una copia fuori dal server. I file ricevuti si eliminano dopo 7 giorni.

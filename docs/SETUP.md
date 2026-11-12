@@ -85,8 +85,8 @@ Il pannello cambia proprietari e chiavi: **non metterlo mai su Internet senza HT
 
 ## 8. Aggiornare, copiare i dati, ripartire
 - **Aggiornare:** `./manager update` (scarica l'immagine nuova e riavvia). I dati stanno in `./data`, non nel contenitore: non si perdono.
-- **Backup:** copia le cartelle `./data` e `./accounts` (contengono database e segreti: tienile in un posto privato). Non finiscono mai su Git.
-- **Spostare su un altro server:** copia `.env`, `./data`, `./accounts`, poi `./setup.sh` e `docker compose up -d`.
+- **Backup:** copia le cartelle `./data`, `./accounts` e `./estensioni` (database, segreti e funzioni create dal bot: tienile in un posto privato). Non finiscono mai su Git.
+- **Spostare su un altro server:** copia `.env`, `./data`, `./accounts`, `./estensioni`, poi `./setup.sh` e `docker compose up -d`.
 
 ## 9. Se qualcosa non va
 | Sintomo | Cosa controllare |

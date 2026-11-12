@@ -1,6 +1,15 @@
 # Piano: EDITH che impara e si costruisce le estensioni
 
-> **Stato: proposta di progetto, nessun codice ancora.** Le decisioni di Luigi sono in fondo (sezione 11). Nel codice si chiamano `extensions`; nell'interfaccia **«Estensioni»**.
+> **Stato: realizzato** (fasi A–F e una prima versione di H; **G non fatta**). Le decisioni del proprietario sono in fondo (sezione 11). Nel codice si chiamano `extensions`; nell'interfaccia **«Estensioni»**. Guida d'uso: [ESTENSIONI.md](ESTENSIONI.md).
+>
+> **Cosa è stato fatto davvero, e dove differisce dal piano:**
+> - A: lezioni (`lezioni`), strumenti `lezione_salva` / `lezioni_leggi` / `regola_proponi`, lavoro `revisione_lezioni` (domenica), approvazione `modifica_profilo`, riproposta dopo `riproponi_dopo_giorni` (14), «Non riproporre più», pagina «Cosa ha imparato».
+> - B–C: validatore, archivio in `./estensioni` (volume nel compose), versioni, passi `leggi_righe/scrivi_riga/aggiorna_riga/leggi_pagina/leggi_api/leggi_dati/chiedi_al_modello/ricorda_tra/ricorda_il`, strumenti `x_<id>_<nome>`, programmi, timer.
+> - D: approvazioni `nuova_estensione` / `modifica_estensione` su Telegram **e** nel pannello (con manifest completo e «cosa cambia»).
+> - E: pagine del pannello. Elementi implementati: `testo`, `tabella`, `tabella_modificabile`, `lista` (**non** `schede`, `numeri`, `modulo`). Pulsanti: spegni/accendi, torna indietro, esegui ora. **«Esporta» non c'è**: si copia la cartella.
+> - F: documenti. H (catalogo): `bot/catalogo/` con 3 estensioni e `INDICE.json` (impronte), installazione solo come proposta da approvare.
+> - Timer: scattano entro circa 30 secondi (il ciclo del bot). Nessun tetto su numero di estensioni o richieste; restano le protezioni tecniche (sezione 5.7).
+> - **G (estensioni in codice in una gabbia): non fatta.** È la parte più rischiosa e il piano la teneva come progetto a parte.
 
 ## 1. L'idea
 Oggi EDITH ha una lista **fissa** di strumenti. L'obiettivo è un assistente che **parte «vergine»**, impara man mano che viene usato e **si costruisce da solo** le funzioni che gli servono, compresa la pagina di gestione di ognuna nel pannello, per ogni account. EDITH resta la **base**: il motore (memoria, approvazioni, pannello, scheduler). Tutto il resto cresce sopra, account per account, come **estensioni**.
@@ -186,7 +195,7 @@ Non si fa con `exec` dentro EDITH: lì ci sono le chiavi.
 
 Ogni fase: test, controllo segreti, ricerca di dati personali, poi commit e push.
 
-## 11. Decisioni prese (Luigi)
+## 11. Decisioni prese dal proprietario
 1. **Primo esempio:** account di cucina con **ricettario** (dati + pagina modificabile), **timer di cottura** e **meteo da API**. Le estensioni **vivono fuori dal contenitore** (`./estensioni`).
 2. **Nome:** «Estensioni» nell'interfaccia.
 3. **Approvazione:** da **Telegram e dal pannello**.

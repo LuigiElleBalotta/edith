@@ -66,6 +66,12 @@ CREATE TABLE IF NOT EXISTS contacts(
   notes TEXT, status TEXT NOT NULL DEFAULT 'da_valutare');
 CREATE TABLE IF NOT EXISTS watch(
   username TEXT PRIMARY KEY, ts REAL NOT NULL, note TEXT);
+CREATE TABLE IF NOT EXISTS lezioni(
+  id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, testo TEXT NOT NULL, fonte TEXT,
+  ripetizioni INTEGER NOT NULL DEFAULT 1, stato TEXT NOT NULL DEFAULT 'nuova', riproponi_dopo REAL);
+CREATE TABLE IF NOT EXISTS ext_timers(
+  id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, due REAL NOT NULL, ext TEXT NOT NULL,
+  message TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'in_attesa', attempts INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS watch_snap(
   username TEXT NOT NULL, day TEXT NOT NULL, followers INTEGER, media_count INTEGER, avg_likes REAL, avg_comments REAL,
   PRIMARY KEY(username, day));
@@ -84,6 +90,8 @@ class Db:
         os.makedirs(data_dir, exist_ok=True)
         self.path = os.path.join(data_dir, "manager.sqlite")
         self.profile_dir = data_dir  # dove sta profile.json (l'account può tenerlo altrove)
+        self.slug = os.path.basename(os.path.normpath(data_dir))  # nome dell'account (chi crea il Db può impostarlo)
+        self.ext_root = os.environ.get("EXTENSIONS_DIR", "/extensions")  # cartella delle estensioni, FUORI dal contenitore
         self.hooks = {}  # azioni da fare DOPO un'approvazione, per questo account
         self._lock = threading.Lock()
         self._c = sqlite3.connect(self.path, check_same_thread=False)
@@ -104,6 +112,10 @@ class Db:
                          ("last_contact", "TEXT"), ("contact_count", "INTEGER NOT NULL DEFAULT 0"), ("last_reminder", "TEXT")):
             if col not in have:
                 self._c.execute(f"ALTER TABLE contacts ADD COLUMN {col} {typ}")
+
+    def close(self):
+        with self._lock:
+            self._c.close()
 
     def _x(self, sql, args=()):
         with self._lock:
@@ -128,6 +140,55 @@ class Db:
     def set(self, key: str, value: str):
         self._x("INSERT INTO kv(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
                 (key, value))
+
+    # --- lezioni: cose imparate dal bot (le regole proposte passano sempre dall'approvazione) ---
+    @staticmethod
+    def _lnorm(t: str) -> str:
+        return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", "", (t or "").lower())).strip()
+
+    def lesson_add(self, testo: str, fonte: str = ""):
+        """Ritorna (id, stato, nuova). Una lezione già nota aumenta le ripetizioni; una scartata per sempre non rientra."""
+        t = (testo or "").strip()[:400]
+        n = self._lnorm(t)
+        for lid, txt, stato in self._x("SELECT id,testo,stato FROM lezioni").fetchall():
+            if self._lnorm(txt) == n:
+                if stato != "mai_piu":
+                    self._x("UPDATE lezioni SET ripetizioni=ripetizioni+1 WHERE id=?", (lid,))
+                return lid, stato, False
+        cur = self._x("INSERT INTO lezioni(ts,testo,fonte) VALUES(?,?,?)", (time.time(), t, (fonte or "")[:300]))
+        return cur.lastrowid, "nuova", True
+
+    def lessons_list(self, stato: str = "", limit: int = 30):
+        """stato: '' tutte tranne mai_piu; 'da_riproporre' = nuove o rifiutate da abbastanza tempo."""
+        q = "SELECT id,ts,testo,fonte,ripetizioni,stato,riproponi_dopo FROM lezioni WHERE stato!='mai_piu'"
+        a = []
+        if stato == "da_riproporre":
+            q += " AND (stato='nuova' OR (stato='rifiutata' AND COALESCE(riproponi_dopo,0)<=?))"
+            a.append(time.time())
+        elif stato:
+            q = "SELECT id,ts,testo,fonte,ripetizioni,stato,riproponi_dopo FROM lezioni WHERE stato=?"
+            a.append(stato)
+        rows = self._x(q + " ORDER BY ripetizioni DESC, id DESC LIMIT ?", (*a, limit)).fetchall()
+        return [dict(zip(("id", "ts", "testo", "fonte", "ripetizioni", "stato", "riproponi_dopo"), r)) for r in rows]
+
+    def lesson_get(self, lid: int):
+        r = self._x("SELECT id,ts,testo,fonte,ripetizioni,stato,riproponi_dopo FROM lezioni WHERE id=?", (lid,)).fetchone()
+        return dict(zip(("id", "ts", "testo", "fonte", "ripetizioni", "stato", "riproponi_dopo"), r)) if r else None
+
+    def lesson_set(self, lid: int, stato: str, riproponi_dopo: float = None) -> bool:
+        if stato not in ("nuova", "proposta", "adottata", "rifiutata", "scartata", "mai_piu"):
+            raise ValueError("stato lezione non valido")
+        return self._x("UPDATE lezioni SET stato=?, riproponi_dopo=? WHERE id=?", (stato, riproponi_dopo, lid)).rowcount > 0
+
+    # --- timer delle estensioni (messaggio al proprietario a un'ora precisa) ---
+    def timer_add(self, ext: str, due: float, message: str) -> int:
+        return self._x("INSERT INTO ext_timers(ts,due,ext,message) VALUES(?,?,?,?)", (time.time(), due, ext, message[:300])).lastrowid
+
+    def timers_due(self, now: float):
+        return self._x("SELECT id,ext,message,attempts FROM ext_timers WHERE status='in_attesa' AND due<=? ORDER BY due", (now,)).fetchall()
+
+    def timer_set(self, tid: int, status: str, attempts: int = None):
+        self._x("UPDATE ext_timers SET status=?, attempts=COALESCE(?,attempts) WHERE id=?", (status, attempts, tid))
 
     # --- audit ---
     def audit(self, actor: str, action: str, detail: str = ""):

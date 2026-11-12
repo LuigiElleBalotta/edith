@@ -6,9 +6,11 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends git openssh-client chromium fonts-liberation \
  && rm -rf /var/lib/apt/lists/* \
  && useradd -r -u 10001 -m manager \
- && mkdir -p /data /config/accounts && chown manager /data /config/accounts
+ && mkdir -p /data /config/accounts /extensions && chown manager /data /config/accounts /extensions
 WORKDIR /srv
 COPY app ./app
+COPY catalogo ./catalogo
 USER manager
-VOLUME ["/data", "/config/accounts"]
+ENV EXTENSIONS_DIR=/extensions
+VOLUME ["/data", "/config/accounts", "/extensions"]
 CMD ["python", "-m", "app.main"]

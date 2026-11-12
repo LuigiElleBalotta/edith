@@ -1,0 +1,47 @@
+{
+  "versione": 1,
+  "id": "ricettario",
+  "nome": "Ricettario",
+  "descrizione": "Raccolta di ricette con ingredienti modificabili dal pannello.",
+  "effetti": ["dati_propri"],
+  "collezioni": [
+    {
+      "nome": "ricette",
+      "campi": [
+        {"chiave": "titolo", "tipo": "testo", "etichetta": "Titolo", "obbligatorio": true},
+        {"chiave": "porzioni", "tipo": "numero", "etichetta": "Porzioni", "predefinito": 4},
+        {"chiave": "ingredienti", "tipo": "elenco", "etichetta": "Ingredienti", "aiuto": "Uno per riga, con la quantità.", "esempio": "200 g di farina"},
+        {"chiave": "procedimento", "tipo": "testo_lungo", "etichetta": "Procedimento"}
+      ]
+    }
+  ],
+  "strumenti": [
+    {
+      "nome": "ricetta_cerca",
+      "descrizione": "Cerca una ricetta per titolo o ingrediente.",
+      "parametri": [{"chiave": "testo", "tipo": "testo", "obbligatorio": true}],
+      "passi": [{"tipo": "leggi_righe", "collezione": "ricette", "cerca": "{testo}"}]
+    },
+    {
+      "nome": "ricetta_salva",
+      "descrizione": "Salva una ricetta nel ricettario.",
+      "parametri": "collezione:ricette",
+      "passi": [{"tipo": "scrivi_riga", "collezione": "ricette"}]
+    },
+    {
+      "nome": "ricetta_aggiorna",
+      "descrizione": "Cambia una ricetta già salvata (serve il numero della riga).",
+      "parametri": "collezione:ricette",
+      "passi": [{"tipo": "aggiorna_riga", "collezione": "ricette"}]
+    }
+  ],
+  "pagine": [
+    {
+      "titolo": "Ricette",
+      "mostra": [
+        {"tipo": "testo", "testo": "Qui trovi tutte le ricette. Puoi aggiungerne, cambiare gli ingredienti o toglierle."},
+        {"tipo": "tabella_modificabile", "collezione": "ricette", "colonne": ["titolo", "porzioni"]}
+      ]
+    }
+  ]
+}

@@ -47,6 +47,16 @@ JOBS = {
             "brevi, una cosa sola, facili da rispondere dal telefono. Non rifare domande già in coda o già fatte. Se non manca nulla, non chiedere nulla. "
             "Rispondi solo «ok»."),
     },
+    # Impara dall'uso: ogni domenica rilegge le lezioni e può proporre UNA o DUE regole per sé (sempre da approvare)
+    "revisione_lezioni": {
+        "weekday": 6, "hour": 18, "minute": 0, "deliver": False,
+        "prompt": (
+            "REVISIONE DELLE LEZIONI (lavoro interno, il proprietario non vedrà questo testo, ma vedrà le proposte con i bottoni). "
+            "Chiama lezioni_leggi(stato=da_riproporre). Guarda anche le conversazioni recenti: se ti ha corretto o ha mostrato una preferenza ripetuta, "
+            "salvala con lezione_salva (testo breve, con cosa l'ha fatta nascere). Poi scegli al massimo 2 lezioni che valgono la pena e per ognuna usa regola_proponi "
+            "(azione aggiungi o sostituisci, collegando la lezione). Non proporre lezioni rifiutate da poco o scartate per sempre: lo strumento te lo dirà. "
+            "Se non c'è niente di utile, non proporre niente. Rispondi solo «ok»."),
+    },
     # Archivio di conoscenza: studio quotidiano delle novità (solo se l'account ne ha uno)
     "studio_kb": {
         "weekday": None, "hour": 6, "minute": 30, "deliver": False, "cond": "kb_attivo",
@@ -165,7 +175,7 @@ def deliver(tg, chat_id: int, agent, text: str, silent: bool = False):
     for aid in (tools.take_proposals() if tools else []):  # bozze da approvare, con i bottoni
         a = approvals.get(agent.db, aid)
         if a:
-            tg.send(chat_id, approvals.message(a), silent=silent, reply_markup=approvals.keyboard(aid))
+            tg.send(chat_id, approvals.message(a), silent=silent, reply_markup=approvals.keyboard(aid, a["kind"]))
 
 
 def run_due_jobs(db, agent, tg, owner_id: int, now: dt.datetime = None, jobs: dict = None) -> list:

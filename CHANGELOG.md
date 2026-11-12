@@ -1,5 +1,11 @@
 # Cronologia
 
+## 0.4 — Estensioni e lezioni
+- **Estensioni**: il bot può proporre funzioni in più (dati propri con pagina modificabile, timer, lettura di API, programmi), descritte da un manifest e **sempre approvate** dal proprietario da Telegram o dal pannello. Vivono fuori dal contenitore (`./estensioni`). Vedi [docs/ESTENSIONI.md](docs/ESTENSIONI.md).
+- **Lezioni**: il bot annota cosa impara e propone regole per sé (con il prima e il dopo); cambiano solo `regole_extra` e solo dopo l'OK. Le rifiutate si riproporranno dopo qualche giorno; **«Non riproporre più»** le ferma per sempre.
+- Pannello: pagine delle estensioni (impostazioni, tabelle modificabili, esegui ora, spegni, versioni), «Da approvare», «Cosa ha imparato», **Catalogo** (ricettario, timer di cottura, meteo, con impronta controllata).
+- Piano e decisioni: [docs/PIANO-STRUMENTI.md](docs/PIANO-STRUMENTI.md). Non c'è ancora l'esecuzione di codice scritto dal bot.
+
 ## 0.3 — EDITH e pannello web
 - Il progetto si chiama **EDITH** ed è più generico: l'ambito dell'account (`ambito`) decide cosa conta come pertinente quando si classificano i contenuti.
 - **Pannello web** (Python, nessuna dipendenza, nessun JavaScript): creazione guidata di un account, personalità e regole, chiavi, verifica dei collegamenti, riavvio e messa da parte. Solo da localhost, con password; vedi [docs/PANEL.md](docs/PANEL.md).

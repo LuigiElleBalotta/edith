@@ -49,6 +49,12 @@ Questa pagina è per chi **accompagna una persona** nell'installazione di EDITH:
 ## Cose che l'assistente non fa mai da solo
 Pubblicare su Instagram, commentare, scrivere messaggi o candidature, comprare, firmare, cambiare DNS o proprietà di domini, creare repository pubblici, attivare il deploy automatico, dare a un contenitore l'accesso a Docker, allargare un permesso. Se serve, lo propone e aspetta il sì.
 
+## Estensioni e lezioni: spiegarle bene
+- Digli che il manager può **proporre** funzioni in più (estensioni) e regole per sé (lezioni), ma **non attiva niente da solo**: decide lui, da Telegram o dal pannello.
+- Prima che approvi, fagli leggere **a quali siti si collega** e **cosa può fare**: sono le due cose che contano. Se non lo convince, **Rifiuta**; se non vuole più sentirne parlare, **Non riproporre più**.
+- Per provare senza rischi: dal pannello → account → *Catalogo* → «Timer di cottura» (non si collega a nessun sito).
+- Dettagli: [ESTENSIONI.md](ESTENSIONI.md).
+
 ## Dopo il setup: aiutare a usarlo
 - Fagli provare: «chiedi al bot di fare il piano dei prossimi 7 giorni».
 - Mostra dove si cambiano personalità e regole: pannello → account → «Personalità» (vale subito).

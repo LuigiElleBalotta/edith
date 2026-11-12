@@ -26,6 +26,8 @@ Regole ferree:
 - Per concorsi, bandi, festival, locali e strategie: web_cerca poi web_leggi/web_browser. Cita sempre fonte e data; se non trovi conferma ufficiale dillo, non inventare scadenze.
 - Se il proprietario ti dice che un contenuto è del tipo giusto o che l'hai classificato male, usa archivio_classifica copiando le sue parole esatte in frase_del_proprietario: così lo sblocchi e ne vedi le statistiche. Non sbloccare mai altro per tua ipotesi. Allo stesso modo registra (con frase_del_proprietario) ciò che dice di aver pubblicato, inviato o contattato; se un fatto salvato è sbagliato, correggilo con fatti_leggi/fatto_elimina/fatto_salva.
 - Tieni il tuo lavoro in ordine: appunto_salva per idee, lezioni (con il dato che le sostiene), tendenze e hashtag, e rileggili con appunti_leggi prima di pianificare; opportunita_leggi/opportunita_aggiorna per le scadenze; ped_aggiorna per spostare o scartare voci del calendario; contatti professionali pubblici con fonte: contatto_salva (con prima_scrittura per programmare il promemoria), contatti_da_fare, contatto_registra_invio quando il proprietario dice di aver scritto (il follow-up lo programmi tu: ogni promemoria ricorda al massimo 3 contatti al giorno, con bottoni Fatto/Domani/Escludi); se scrive «bozza» dopo un promemoria, prepara il testo con proponi_bozza (tipo bozza_candidatura) per il contatto indicato in PROMEMORIA CONTATTI; instagram_monitor_* per seguire nel tempo artisti simili e concorrenti. Usa data_ora prima di calcolare date.
+- Impari dall'uso: quando noti uno schema o il proprietario ti corregge, annotalo con lezione_salva (con cosa l'ha fatta nascere). Quando una lezione vale la pena, proponi una regola con regola_proponi: non cambi MAI le tue regole da solo. Se la rifiuta, non insistere prima del tempo che dice lo strumento; se preme «Non riproporre più», non riproporla mai.
+- Se il proprietario ripete spesso la stessa richiesta, o gli serve un piccolo archivio, un timer o un dato da una fonte web, puoi proporre un'ESTENSIONE: leggi prima estensione_formato, poi estensione_proponi. Si attiva solo se approva (Telegram o pannello). Le estensioni già attive hanno strumenti che si chiamano x_...: usali al posto di rifare la ricerca ogni volta. Non puoi usare le estensioni per pubblicare, scrivere a terzi o mandare dati fuori.
 - Quando il proprietario chiede dati su Instagram o sull'archivio, USA gli strumenti invece di rispondere a memoria. Non smentire mai dati che compaiono nello STATO REALE qui sotto."""
 
 HAIKU = "cc/claude-haiku-5-5"  # riserva dei lavori di fondo (se la chiave dell'account lo consente)
@@ -85,7 +87,7 @@ class Agent:
                          f"{prof.get('followers_count')} follower): {' / '.join(prof['biography'].split(chr(10)))}")
         facts = self.db.facts_list()
         if facts:
-            lines.append("- FATTI DETTI DA LUIGI (non verificati da fonti esterne): " + " | ".join(facts))
+            lines.append("- FATTI DETTI DAL PROPRIETARIO (non verificati da fonti esterne): " + " | ".join(facts))
         try:
             errs = json.loads(self.db.get("import:errori", "") or "[]")
         except ValueError:

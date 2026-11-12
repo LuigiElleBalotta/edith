@@ -8,7 +8,8 @@ import urllib.parse
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from app import accounts, config, panel  # noqa: E402
+from app import accounts, config, extensions, panel  # noqa: E402
+from app.db import Db  # noqa: E402
 
 PW = "una-password-lunga-12"
 TOKEN = "123456:AAH-token-segretissimo-del-bot"
@@ -77,7 +78,7 @@ class PanelTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.acc, self.data = os.path.join(self.tmp.name, "accounts"), os.path.join(self.tmp.name, "data")
         os.makedirs(self.acc)
-        self.p = panel.Panel(PW, self.acc, self.data, ENV, checks=CHECKS)
+        self.p = panel.Panel(PW, self.acc, self.data, ENV, checks=CHECKS, ext_root=os.path.join(self.tmp.name, "ext"))
         self.srv = panel.serve(self.p, "127.0.0.1", 0)
         self.port = self.srv.server_address[1]
         self.c = Client(self.port)
@@ -134,6 +135,154 @@ class PanelTests(unittest.TestCase):
         st, body, _ = self.c.post("/system/restart", {})
         self.assertEqual(st, 200)
         self.assertTrue(ctl.fatto)
+
+    # ---- estensioni, approvazioni, lezioni, catalogo ----
+    def adb(self, nome="alfa"):
+        db = Db(os.path.join(self.data, nome))
+        db.slug, db.ext_root = nome, self.p.ext_root
+        return db
+
+    def cat(self, nome):
+        with open(os.path.join(os.path.dirname(__file__), "..", "catalogo", nome + ".json"), encoding="utf-8") as f:
+            return json.load(f)
+
+    def attiva(self, nome, account="alfa", manifest=None):
+        st = extensions.ExtStore(self.p.ext_root, account)
+        st.propose(manifest or self.cat(nome))
+        st.approve((manifest or self.cat(nome))["id"])
+        return st
+
+    def test_pagina_estensione_righe_modifica_elimina(self):
+        self.make_account()
+        self.attiva("ricettario")
+        self.assertEqual(self.c.login(), 303)
+        st, body, _ = self.c.req("GET", "/account/alfa/estensioni")
+        self.assertEqual(st, 200)
+        self.assertIn("Ricettario", body)
+        st, body, _ = self.c.req("GET", "/account/alfa/estensioni/ricettario")
+        self.assertIn("Aggiungi", body)
+        self.assertEqual(self.c.req("POST", "/account/alfa/estensioni/ricettario/riga", {"coll": "ricette", "azione": "aggiungi", "titolo": "x"})[0], 403)  # senza CSRF
+        st, body, _ = self.c.post("/account/alfa/estensioni/ricettario/riga", {"coll": "ricette", "azione": "aggiungi", "titolo": "<script>alert(1)</script>", "ingredienti": "uova\nfarina"})
+        self.assertEqual(st, 200)
+        self.assertIn("Aggiunta", body)
+        self.assertNotIn("<script>alert", body)
+        self.assertIn("&lt;script&gt;", body)
+        st, body, _ = self.c.req("GET", "/account/alfa/estensioni/ricettario/modifica/ricette/1")
+        self.assertIn("uova", body)
+        st, body, _ = self.c.post("/account/alfa/estensioni/ricettario/riga", {"coll": "ricette", "rid": "1", "azione": "salva", "titolo": "Frittata", "ingredienti": "uova"})
+        self.assertIn("Salvato", body)
+        self.assertIn("Frittata", body)
+        st, body, _ = self.c.post("/account/alfa/estensioni/ricettario/riga", {"coll": "ricette", "rid": "1", "azione": "elimina_chiedi"})
+        self.assertIn("Sì, elimina", body)
+        self.assertIn("Frittata", self.c.req("GET", "/account/alfa/estensioni/ricettario")[1])  # ancora lì finché non conferma
+        st, body, _ = self.c.post("/account/alfa/estensioni/ricettario/riga", {"coll": "ricette", "rid": "1", "azione": "elimina"})
+        self.assertIn("Eliminata", body)
+        st, body, _ = self.c.post("/account/alfa/estensioni/ricettario/riga", {"coll": "ricette", "azione": "aggiungi", "porzioni": "tante"})
+        self.assertIn("obbligatorio", body)
+
+    def test_impostazioni_valori_errori_e_segreti(self):
+        self.make_account()
+        m = self.cat("meteo")
+        m["impostazioni"].append({"chiave": "chiave", "tipo": "segreto", "etichetta": "Chiave del servizio"})
+        self.attiva("meteo", manifest=m)
+        self.assertEqual(self.c.login(), 303)
+        st, body, _ = self.c.post("/account/alfa/estensioni/meteo/impostazioni", {"citta_lat": "45,5", "citta_lon": "9.2", "chiave": "SEGRETISSIMA123"})
+        self.assertIn("Impostazioni salvate", body)
+        self.assertNotIn("SEGRETISSIMA123", body)
+        self.assertIn("impostato", body)
+        env = config.parse_env_file(os.path.join(self.acc, "alfa", "account.env"))
+        self.assertEqual(env["EXT_METEO_CHIAVE"], "SEGRETISSIMA123")
+        self.assertEqual(os.stat(os.path.join(self.acc, "alfa", "account.env")).st_mode & 0o777, 0o600) if os.name != "nt" else None
+        st, body, _ = self.c.post("/account/alfa/estensioni/meteo/impostazioni", {"citta_lat": "nord", "citta_lon": "9"})
+        self.assertIn("numero", body)
+
+    def test_esegui_ora_spegni_e_accendi(self):
+        self.make_account()
+        self.attiva("meteo")
+        self.p.ext_fetch = lambda url, domini, headers=None: ("application/json", json.dumps({"daily": {"temperature_2m_max": [19], "precipitation_sum": [0]}}))
+        self.assertEqual(self.c.login(), 303)
+        st, body, _ = self.c.post("/account/alfa/estensioni/meteo/esegui", {})
+        self.assertIn("daily.temperature_2m_max.0: 19", body)
+        st, body, _ = self.c.post("/account/alfa/estensioni/meteo/attiva", {"on": "0"})
+        self.assertIn("Spenta", body)
+        self.assertFalse(extensions.ExtStore(self.p.ext_root, "alfa").state("meteo")["attiva"])
+        self.assertIn("Acceso", self.c.post("/account/alfa/estensioni/meteo/attiva", {"on": "1"})[1])
+
+    def test_approvazione_dal_pannello_e_non_riproporre_piu(self):
+        self.make_account()
+        db = self.adb()
+        aid = extensions.propose(db, self.cat("timer_cottura"))
+        aid2 = extensions.propose(db, self.cat("meteo"))
+        db.close()
+        self.assertEqual(self.c.login(), 303)
+        st, body, _ = self.c.req("GET", "/account/alfa")
+        self.assertIn("Estensioni", body)
+        st, body, _ = self.c.req("GET", "/account/alfa/estensioni")
+        self.assertIn("Da approvare", body)
+        self.assertIn("Timer di cottura", body)
+        self.assertIn("Vedi il manifest completo", body)
+        self.assertEqual(self.c.req("POST", f"/account/alfa/approvazione/{aid}/ok", {})[0], 403)
+        st, body, _ = self.c.post(f"/account/alfa/approvazione/{aid}/ok", {})
+        self.assertIn("attiva", body)
+        self.assertTrue(extensions.ExtStore(self.p.ext_root, "alfa").state("timer_cottura")["attiva"])
+        st, body, _ = self.c.post(f"/account/alfa/approvazione/{aid2}/mai", {})
+        self.assertIn("non la riproporrò", body)
+        db = self.adb()
+        self.assertEqual(db.get("ext:mai:meteo"), "1")
+        db.close()
+        self.assertEqual(self.c.post("/account/alfa/approvazione/9999/ok", {})[0], 404)
+        self.assertIn("già", self.c.post(f"/account/alfa/approvazione/{aid}/ok", {})[1])  # già decisa: non si decide due volte
+
+    def test_lezioni_pagina_scarta_e_riattiva(self):
+        self.make_account()
+        db = self.adb()
+        lid = db.lesson_add("Preferisce i post del venerdì", "due volte")[0]
+        db.close()
+        self.assertEqual(self.c.login(), 303)
+        st, body, _ = self.c.req("GET", "/account/alfa/lezioni")
+        self.assertIn("venerdì", body)
+        self.assertIn("Non riproporre più", body)
+        self.assertIn("Fatto", self.c.post(f"/account/alfa/lezioni/{lid}/scarta", {})[1])
+        body = self.c.req("GET", "/account/alfa/lezioni")[1]
+        self.assertIn("Scartate per sempre", body)
+        self.assertIn("Fatto", self.c.post(f"/account/alfa/lezioni/{lid}/riattiva", {})[1])
+        self.assertEqual(self.c.post("/account/alfa/lezioni/999/scarta", {})[0], 404)
+
+    def test_catalogo_propone_ma_non_installa(self):
+        self.make_account()
+        self.assertEqual(self.c.login(), 303)
+        st, body, _ = self.c.req("GET", "/account/alfa/catalogo")
+        for n in ("Ricettario", "Timer di cottura", "Meteo"):
+            self.assertIn(n, body)
+        st, body, _ = self.c.post("/account/alfa/catalogo/meteo/proponi", {})
+        self.assertIn("Proposta creata", body)
+        self.assertIn("Da approvare", body)
+        self.assertIsNone(extensions.ExtStore(self.p.ext_root, "alfa").manifest("meteo"))  # non è installata finché non approvi
+        self.assertIn("catalogo", self.c.post("/account/alfa/catalogo/inesistente/proponi", {})[1])
+
+    def test_estensioni_di_un_account_non_si_vedono_da_un_altro(self):
+        self.make_account("alfa")
+        self.make_account("beta")
+        self.attiva("ricettario", "alfa")
+        self.assertEqual(self.c.login(), 303)
+        self.assertIn("Estensione non trovata", self.c.req("GET", "/account/beta/estensioni/ricettario")[1])
+        self.assertNotIn("Ricettario", self.c.req("GET", "/account/beta/estensioni")[1])
+        self.assertEqual(self.c.post("/account/beta/estensioni/ricettario/riga", {"coll": "ricette", "azione": "aggiungi", "titolo": "x"})[0], 404)
+
+    def test_testi_del_manifest_vengono_neutralizzati_e_percorsi_ostili_non_rompono(self):
+        self.make_account()
+        m = self.cat("timer_cottura")
+        m["nome"] = "<img src=x onerror=alert(1)>"
+        m["descrizione"] = "<script>boom()</script>"
+        self.attiva("x", manifest=m)
+        self.assertEqual(self.c.login(), 303)
+        for url in ("/account/alfa/estensioni", "/account/alfa/estensioni/timer_cottura"):
+            body = self.c.req("GET", url)[1]
+            self.assertNotIn("<img src=x", body)
+            self.assertNotIn("<script>boom", body)
+        for bad in ("..%2f..%2fetc", "a%2fb", "X" * 40):
+            self.assertIn(self.c.req("GET", f"/account/alfa/estensioni/{bad}")[0], (200, 404))
+        self.assertIn(self.c.req("GET", "/account/alfa/estensioni/ricettario/modifica/ricette/abc")[0], (404,))
 
     # ---- accesso e difese ----
     def test_senza_login_non_si_vede_niente(self):

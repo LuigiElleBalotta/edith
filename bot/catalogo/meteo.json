@@ -1,0 +1,28 @@
+{
+  "versione": 1,
+  "id": "meteo",
+  "nome": "Meteo",
+  "descrizione": "Legge il meteo di oggi da un servizio pubblico e te lo manda ogni mattina.",
+  "effetti": ["leggere"],
+  "domini": ["api.open-meteo.com"],
+  "impostazioni": [
+    {"chiave": "citta_lat", "tipo": "numero", "etichetta": "Latitudine", "aiuto": "Della tua città. Esempio: 41.9", "predefinito": 41.9},
+    {"chiave": "citta_lon", "tipo": "numero", "etichetta": "Longitudine", "aiuto": "Della tua città. Esempio: 12.5", "predefinito": 12.5}
+  ],
+  "strumenti": [
+    {
+      "nome": "meteo_oggi",
+      "descrizione": "Temperatura massima e pioggia di oggi.",
+      "parametri": [],
+      "passi": [
+        {
+          "tipo": "leggi_api",
+          "url": "https://api.open-meteo.com/v1/forecast?latitude={citta_lat}&longitude={citta_lon}&daily=temperature_2m_max,precipitation_sum&timezone=auto&forecast_days=1",
+          "estrai": ["daily.temperature_2m_max.0", "daily.precipitation_sum.0"]
+        }
+      ]
+    }
+  ],
+  "pagine": [{"titolo": "Meteo", "mostra": [{"tipo": "testo", "testo": "Scrivi le coordinate della tua città nelle impostazioni qui sopra."}]}],
+  "programma": {"strumento": "meteo_oggi", "giorno": "ogni giorno", "ora": "07:30", "invia": true}
+}

@@ -1,0 +1,18 @@
+{
+  "versione": 1,
+  "id": "timer_cottura",
+  "nome": "Timer di cottura",
+  "descrizione": "Ti avvisa su Telegram quando finisce una fase della cottura.",
+  "effetti": ["avvisa_proprietario"],
+  "strumenti": [
+    {
+      "nome": "timer_avvia",
+      "descrizione": "Avvisa il proprietario tra N minuti con un messaggio (es. «scola la pasta»).",
+      "parametri": [
+        {"chiave": "minuti", "tipo": "numero", "etichetta": "Minuti", "obbligatorio": true},
+        {"chiave": "cosa", "tipo": "testo", "etichetta": "Cosa fare allo scadere", "obbligatorio": true}
+      ],
+      "passi": [{"tipo": "ricorda_tra", "minuti": "{minuti}", "messaggio": "{cosa}: tempo scaduto"}]
+    }
+  ]
+}
